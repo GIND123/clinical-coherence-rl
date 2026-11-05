@@ -198,11 +198,10 @@ def cmd_rehearse(a) -> int:
     step("plan", lambda: print(qa.forecast_text(qa.forecast_all(ws))))
     step("run pilot", lambda: jobs.run_job("pilot", ws, limit_cases=n))
     rep = step("report pilot", lambda: qa.pilot_report(ws))
-    print(f"pilot gates on MOCK data: {'GO' if rep['go'] else 'NO-GO'} {rep['failures'][:5]}
-"
-          "(the mock deliberately injects ~1% truncations, timeouts and malformed answers, so a NO-GO
-"
-          " here is expected: it shows the gates work. Only the real pilot's verdict matters.)")
+    verdict = "GO" if rep["go"] else "NO-GO"
+    print(f"pilot gates on MOCK data: {verdict} {rep['failures'][:5]}")
+    print("(the mock deliberately injects ~1% truncations, timeouts and malformed answers, so a NO-GO")
+    print(" here is expected: it shows the gates work. Only the real pilot's verdict matters.)")
     step("run panel_main (limited)", lambda: jobs.run_job("panel_main", ws, limit_cases=n, force_order=True))
     step("run effort_arm (limited)", lambda: jobs.run_job("effort_arm", ws, limit_cases=max(2, n // 4), force_order=True))
     step("run sequential (limited)", lambda: jobs.run_job("sequential", ws, limit_cases=max(2, n // 4), force_order=True))

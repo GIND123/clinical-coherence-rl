@@ -39,7 +39,7 @@ source .venv/bin/activate  # do this in every new terminal
 ccrl doctor                # checks Python, packages, config, AWS identity, Bedrock reachability
 ccrl rehearse              # full zero-cost dry run (~10 min); must end with "REHEARSAL PASSED"
                            # (a "NO-GO" line on MOCK data inside it is expected: the mock injects failures)
-python -m pytest -q        # optional: 41 tests, ~1 min
+python -m pytest -q        # optional: 61 tests, ~1 min
 ```
 
 If `python3 --version` is below 3.10:

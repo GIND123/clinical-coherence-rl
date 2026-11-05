@@ -30,7 +30,7 @@ It has two tracks that share one item set, one parser and one set of estimands:
 | Items, freeze, pilot, panel, arms | code done; **paid runs pending** (RUNBOOK §5–9) |
 | Reward + synthetic-policy suite (Propositions 2 and 4) | **done; 10/10 criteria pass** |
 | Track B trainer, SFT/BCT/logit-readout baselines, local evaluation | code done; CPU smoke-tested; GPU runs pending |
-| Tests | 41 passing (`python -m pytest -q`, ~1 min, CPU) |
+| Tests | 61 passing (`python -m pytest -q`, ~1 min, CPU) |
 
 ## Quick start
 
@@ -77,7 +77,7 @@ Then follow [RUNBOOK.md](RUNBOOK.md) step by step.
 | `src/ccrl/reward/` | the coherence-gated reward and the synthetic-policy suite |
 | `src/ccrl/train/` | paired-group GRPO, SFT/BCT, logit readout, local evaluation |
 | `docs/` | [design](docs/design.md), [theory](docs/theory.md), [literature review](docs/literature_review.md), [pre-registration](docs/preregistration.md), [budget](docs/budget.md), [training](docs/training.md), [data cards](docs/data_cards.md) |
-| `tests/` | 41 CPU tests |
+| `tests/` | 61 CPU tests |
 
 ## Data and licences
 
