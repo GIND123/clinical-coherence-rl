@@ -1,0 +1,4 @@
+{candidates_section}Vignette:
+{vignette}{authority_section}
+
+Give your answer as the JSON object described above.

@@ -1,0 +1,36 @@
+# Track B base configuration (Qwen3-4B, LoRA, paired-group GRPO).
+# Every other file in this directory starts from this one (`base: base.yaml`).
+# Reward constants delta_S and m0 come from `ccrl train reward-suite`
+# (0.5 x the reference posterior's batch-mean value on DDXPlus training patients);
+# tau_I is set from the pilot: the 95th percentile of the base model's retest JS.
+method: grpo
+model: Qwen/Qwen3-4B
+dtype: bfloat16
+device_map: auto
+lora: {r: 32, alpha: 64, dropout: 0.0, target_modules: all-linear}
+gradient_checkpointing: true
+chat_template_kwargs: {enable_thinking: false}
+dataset: ddxplus
+label_free: false
+contrast: triage
+transforms: {perm: 1.0, dup: 1.0, para: 1.0, cue: 1.0}
+patients_per_step: 16
+group_size: 4
+contrast_size: 2
+steps: 300
+lr: 1.0e-5
+warmup_steps: 10
+lr_schedule: constant
+kl_coef: 0.01
+normalize_std: true
+min_group_std: 1.0e-4
+max_grad_norm: 1.0
+micro_batch_tokens: 16384
+micro_batch_max_samples: 8
+logprob_chunk: 2048
+generation: {max_new_tokens: 512, temperature: 1.0, top_p: 1.0, batch_size: 32}
+save_every: 25
+collapse_stop: true
+reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.10, delta_S: 0.234, m0: 0.459, c_fid: 3.0,
+         sensitivity: batch, acc_mode: brier}
+output_dir: runs/train/{name}_s{seed}

@@ -1,0 +1,121 @@
+# =============================================================================
+# Study design — single source of truth.
+#
+# Everything that determines WHICH cases are asked, WHAT each model is asked,
+# and HOW MANY times is defined here and nowhere else. The item builder,
+# the job planner, the cost forecast and the analysis all read this file.
+# Changing it after `ccrl freeze` invalidates the freeze (the runner refuses
+# to start until you re-freeze), so the pre-registered design cannot drift.
+# =============================================================================
+
+study_id: ccrl-panel-v1
+seed: 20261105                # master seed; every random draw derives from it
+
+dates:
+  # No new paid call is dispatched after this instant (local time of the
+  # machine running the panel). Credit expires end of December; the gap
+  # absorbs Cost Explorer lag (~24 h) and any re-run of failed items.
+  hard_stop: "2026-12-18T23:59:00"
+  priority_c_decision: "2026-12-10"
+  osf_preregistration: "2026-11-14"
+
+# -----------------------------------------------------------------------------
+# DDXPlus (Fansi Tchango et al., NeurIPS 2022 D&B; CC BY 4.0)
+# -----------------------------------------------------------------------------
+ddxplus:
+  figshare_article: 22687585
+  files:                      # name: [figshare file id, md5]
+    release_conditions.json: [62561569, a992eadcff3099dd72e1820fbd2115aa]
+    release_evidences.json: [40278013, 0660962abe0bbf99e1fb77188c253597]
+    release_test_patients.zip: [40278016, 6fd53d331cf19ed4439bf4f46b92ee94]
+    release_validate_patients.zip: [40278022, e4db88e9082f18410de6fd0cb7e74d18]
+    release_train_patients.zip: [40278019, f75a78420ccb061951daa4db2d62139b]
+  # A "finding unit" is one questionnaire item with its descriptors attached
+  # (e.g. pain + its location, character, intensity). Units are the objects
+  # that are permuted, duplicated and ablated.
+  min_units: 7
+  max_units: 14
+  max_tokens_per_case: 34
+  panel_per_pathology: 6        # 49 x 6 = 294 ...
+  panel_extra_random: 6         # ... + 6 = 300  (priority A)
+  ext_per_pathology: 6          # priority C2 extension: another 300
+  ext_extra_random: 6
+  pilot_cases: 20               # disjoint from panel and extension
+  core_cases: 75                # subset of the panel: effort / Astra arms
+  sequential_cases: 150         # subset of the panel: two-stage evidence arm
+  distill_cases: 2000           # training split, non-held-out pathologies
+  likelihood_smoothing: 0.5     # Jeffreys prior on P(token | pathology)
+  # |log LR| threshold (natural log) for a unit to count as "KB-informative"
+  informative_log_lr: 0.6931471805599453   # log 2
+
+  # Body-system strata used to draw the 8 held-out pathologies (Track B
+  # transfer test). Assignment is the study team's clinical grouping.
+  body_systems:
+    respiratory_ent: [Acute COPD exacerbation / infection, Acute laryngitis, Acute otitis media,
+      Acute rhinosinusitis, Allergic sinusitis, Bronchiectasis, Bronchiolitis, Bronchitis,
+      Bronchospasm / acute asthma exacerbation, Chronic rhinosinusitis, Croup, Epiglottitis,
+      Larygospasm, Pneumonia, Pulmonary neoplasm, Spontaneous pneumothorax, URTI,
+      Viral pharyngitis, Whooping cough]
+    cardiovascular: [Acute pulmonary edema, Atrial fibrillation, Myocarditis, PSVT, Pericarditis,
+      Possible NSTEMI / STEMI, Pulmonary embolism, Stable angina, Unstable angina]
+    gastrointestinal: [Boerhaave, GERD, Inguinal hernia, Pancreatic neoplasm, Scombroid food poisoning]
+    neurologic_psychiatric: [Acute dystonic reactions, Cluster headache, Guillain-Barré syndrome,
+      Myasthenia gravis, Panic attack]
+    infectious_systemic: [Chagas, Ebola, HIV (initial infection), Influenza, Tuberculosis]
+    immune_heme_other: [Anaphylaxis, Anemia, Localized edema, SLE, Sarcoidosis, Spontaneous rib fracture]
+  heldout_per_system:
+    respiratory_ent: 3
+    cardiovascular: 1
+    gastrointestinal: 1
+    neurologic_psychiatric: 1
+    infectious_systemic: 1
+    immune_heme_other: 1
+
+# -----------------------------------------------------------------------------
+# MedCaseReasoning (Wu et al., arXiv:2505.11733; HF zou-lab/MedCaseReasoning,
+# license MIT per the dataset card at the pinned revision)
+# -----------------------------------------------------------------------------
+medcase:
+  hf_repo: zou-lab/MedCaseReasoning
+  hf_revision: 469a5365bc534b5b2b9cfbc52b2ef2a10f43a339
+  min_prompt_chars: 700
+  max_prompt_chars: 3000
+  k_candidates: 10              # gold + 9 distractors, order shuffled per case
+  min_findings: 6               # after extraction and verification
+  max_findings: 24
+  # How many cases are SENT to preprocessing (extra = reserve for cases that
+  # fail verification), and how many are USED.
+  pilot_prep: 16
+  pilot_cases: 10
+  panel_prep: 210
+  panel_cases: 150
+  core_cases: 75                # subset of the panel
+  train_prep: 2150
+  train_cases: 2000
+
+# -----------------------------------------------------------------------------
+# The 10 calls per case (Track A main panel). `transform` names are the
+# keys used everywhere (items, analysis). Order = call index 1..10.
+# -----------------------------------------------------------------------------
+calls:
+  - {index: 1,  transform: base,      kind: reference}
+  - {index: 2,  transform: perm1,     kind: meaning_preserving}
+  - {index: 3,  transform: perm2,     kind: meaning_preserving}
+  - {index: 4,  transform: perm3,     kind: meaning_preserving}
+  - {index: 5,  transform: dup,       kind: meaning_preserving}
+  - {index: 6,  transform: para,      kind: meaning_preserving}
+  - {index: 7,  transform: cue,       kind: meaning_preserving}
+  - {index: 8,  transform: authority, kind: evaluation_only}
+  - {index: 9,  transform: ablate,    kind: evidence_changing}
+  - {index: 10, transform: retest,    kind: evaluation_only}
+
+transform_sets:
+  all10: [base, perm1, perm2, perm3, dup, para, cue, authority, ablate, retest]
+  effort6: [base, perm1, para, cue, ablate, retest]
+  pilot: [base, perm1, perm2, perm3, dup, para, cue, authority, ablate, retest, schema_scores]
+  base_only: [base]
+
+authority_cue:
+  stated_reliability: 0.5       # "correct 50% of the time" -> normative LR = r(K-1)/(1-r)
+
+posterior_floor: 0.005          # probability floor for log-odds (half the 1% output resolution)

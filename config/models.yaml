@@ -1,0 +1,174 @@
+# =============================================================================
+# Model registry (Track A, Amazon Bedrock, Converse API).
+#
+# This file says WHAT we intend to call. It is never used for a paid run
+# directly: `ccrl models resolve` matches every entry to a live Bedrock model
+# or inference-profile ID, and `ccrl models probe` sends a few tiny real
+# requests per model, verifies which request parameters are accepted, and
+# writes config/models.lock.yaml. Every paid job reads ONLY the lock file.
+#
+# Request-parameter policy (identical across vendors, so the panel is fair):
+#   * temperature / top_p are NEVER sent (Claude Opus 5.5 rejects them; every
+#     other model runs at its provider default, which the probe records).
+#   * effort is sent only where `effort.strategy` is not `none`.
+#   * no reasoning text is requested in the prompt; whatever reasoning or
+#     reasoning summary the API returns is archived verbatim.
+#   * no server-side or client-side model fallback: a refusal is recorded as
+#     a refusal, never silently answered by a different model.
+#
+# effort.strategy:
+#   output_config     -> Converse `outputConfig={"effort": <level>}`
+#   reasoning_field   -> additionalModelRequestFields {"reasoning_effort": <level>}
+#   none              -> provider default reasoning; nothing sent
+# `required: true` means the probe FAILS (instead of degrading) if no effort
+# strategy is accepted — used where the effort arm depends on it.
+#
+# optional_fields are sent if the probe shows they are accepted, and dropped
+# (with a recorded warning) if they are rejected.
+# =============================================================================
+
+defaults:
+  region: us-east-1
+  read_timeout_s: 1200
+  connect_timeout_s: 30
+  concurrency: 4
+  max_tokens: {low: 8192, medium: 16384, high: 32768, default: 16384}
+  service_tier: default
+  prompt_cache: false
+
+models:
+  # ---------------- Tier 1: frontier core ----------------
+  opus-5.5:
+    display: Claude Opus 5.5
+    vendor: anthropic
+    group: frontier
+    id_candidates: [us.anthropic.claude-opus-5-5, global.anthropic.claude-opus-5-5, anthropic.claude-opus-5-5]
+    match: 'claude.?opus.?5.?5'
+    effort: {strategy: output_config, default: low, required: true, fallbacks: [reasoning_field]}
+    service_tier: default            # Standard only on Bedrock (no Batch/Flex/Priority)
+    prompt_cache: true               # system block (candidate list) >= 512-token minimum
+    optional_fields:
+      thinking: {type: adaptive, display: summarized}   # archive a readable reasoning summary
+    concurrency: 6
+
+  sonnet-5.5:
+    display: Claude Sonnet 5.5
+    vendor: anthropic
+    group: frontier
+    id_candidates: [us.anthropic.claude-sonnet-5-5, global.anthropic.claude-sonnet-5-5, anthropic.claude-sonnet-5-5]
+    match: 'claude.?sonnet.?5.?5'
+    effort: {strategy: output_config, default: low, required: true, fallbacks: [reasoning_field]}
+    prompt_cache: true
+    optional_fields:
+      thinking: {type: adaptive, display: summarized}
+    concurrency: 6
+
+  gpt-6-sol:
+    display: GPT-6 Sol
+    vendor: openai
+    group: frontier
+    id_candidates: [global.openai.gpt-6-sol, us.openai.gpt-6-sol, openai.gpt-6-sol]
+    match: 'gpt.?6.?sol'
+    effort: {strategy: output_config, default: low, required: true, fallbacks: [reasoning_field]}
+    service_tier: default            # Standard only on Bedrock
+    concurrency: 6
+
+  gpt-6-luna:
+    display: GPT-6 Luna
+    vendor: openai
+    group: frontier
+    id_candidates: [global.openai.gpt-6-luna, us.openai.gpt-6-luna, openai.gpt-6-luna]
+    match: 'gpt.?6.?luna'
+    effort: {strategy: output_config, default: low, required: false, fallbacks: [reasoning_field]}
+    concurrency: 6
+
+  grok-4.6:
+    display: Grok 4.6
+    vendor: xai
+    group: frontier
+    id_candidates: [xai.grok-4-6, us.xai.grok-4-6, global.xai.grok-4-6]
+    match: 'grok.?4.?6'
+    effort: {strategy: none}
+    service_tier: flex               # model card: Flex at 0.5x Standard
+    concurrency: 4
+
+  kimi-k3:
+    display: Kimi K3
+    vendor: moonshot
+    group: frontier
+    id_candidates: [moonshotai.kimi-k3, moonshot.kimi-k3, us.moonshotai.kimi-k3]
+    match: 'kimi.?k3'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  # ---------------- Tier 2: open-weight scale ladder ----------------
+  deepseek-v3.2:
+    display: DeepSeek V3.2
+    vendor: deepseek
+    group: open_weight
+    id_candidates: [deepseek.v3-2, deepseek.deepseek-v3-2, us.deepseek.v3-2]
+    match: 'deepseek.?v3.?2'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  glm-5:
+    display: GLM 5
+    vendor: zai
+    group: open_weight
+    id_candidates: [zai.glm-5, z-ai.glm-5, us.zai.glm-5]
+    match: 'glm.?5(?![.0-9])'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  qwen3-next-80b:
+    display: Qwen3 Next 80B A3B
+    vendor: qwen
+    group: open_weight
+    id_candidates: [qwen.qwen3-next-80b-a3b, qwen.qwen3-next-80b-a3b-v1:0]
+    match: 'qwen3.?next.?80b'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  gpt-oss-120b:
+    display: gpt-oss-120b
+    vendor: openai
+    group: open_weight
+    id_candidates: [openai.gpt-oss-120b-1:0, openai.gpt-oss-120b]
+    match: 'gpt.?oss.?120b'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  qwen3-32b:
+    display: Qwen3-32B
+    vendor: qwen
+    group: open_weight
+    id_candidates: [qwen.qwen3-32b-v1:0, qwen.qwen3-32b]
+    match: 'qwen3.?32b'
+    effort: {strategy: none}
+    service_tier: flex
+    concurrency: 4
+
+  # ---------------- Ceiling check (priority C1) ----------------
+  gpt-6-astra:
+    display: GPT-6 Astra
+    vendor: openai
+    group: ceiling
+    id_candidates: [global.openai.gpt-6-astra, us.openai.gpt-6-astra, openai.gpt-6-astra]
+    match: 'gpt.?6.?astra'
+    effort: {strategy: output_config, default: low, required: false, fallbacks: [reasoning_field]}
+    concurrency: 4
+
+# Panel membership (who answers the 10-call design). Order = report order.
+panel: [opus-5.5, sonnet-5.5, gpt-6-sol, gpt-6-luna, grok-4.6, kimi-k3,
+        deepseek-v3.2, glm-5, qwen3-next-80b, gpt-oss-120b, qwen3-32b]
+
+# Preprocessing roles (MedCaseReasoning extraction, DDXPlus phrase bank).
+# The verifier is deliberately from a different vendor than the preprocessor.
+roles:
+  preprocessor: gpt-6-sol
+  verifier: sonnet-5.5

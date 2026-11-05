@@ -1,0 +1,8 @@
+# Bias-augmented consistency training (posterior version): own clean answer as target for T(x).
+base: base.yaml
+method: sft
+sft_source: bct
+sft_examples: 8000
+lr: 1.0e-4
+batch_size: 8
+epochs: 1.0

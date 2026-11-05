@@ -1,0 +1,7 @@
+# Differentiable logit-readout consistency baseline.
+base: base.yaml
+method: logit_readout
+patients_per_step: 8
+lambda_s: 1.0
+lambda_ce: 0.0
+delta: 0.2

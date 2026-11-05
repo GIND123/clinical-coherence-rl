@@ -1,0 +1,39 @@
+# =============================================================================
+# Frozen price table, USD per 1,000,000 tokens, ON-DEMAND STANDARD tier,
+# region us-east-1. Reasoning tokens are billed as output tokens.
+#
+# >>> BEFORE THE PILOT: open https://aws.amazon.com/bedrock/pricing/ (and the
+# >>> model's Marketplace listing for third-party models), compare every row,
+# >>> correct it here, and set `verified: true` with today's date in `checked`.
+#
+# How the numbers are used:
+#   * BUDGET GUARD (decides whether a call may be sent) uses the Standard price
+#     below, ignores any Flex discount, and multiplies unverified rows by
+#     `unverified_safety_factor`. It can only over-estimate.
+#   * REPORTED COST (ledger, status, export) applies `flex_multiplier` when the
+#     response says it was served on the Flex tier.
+#   * `ccrl billing reconcile` compares the ledger with AWS Cost Explorer after
+#     24-48 h; do this after the pilot, before production.
+#
+# cache_write applies to prompt-cache creation (Anthropic: 1.25 x input for
+# the 5-minute TTL); cache_read to cache hits.
+# =============================================================================
+
+unverified_safety_factor: 1.25
+flex_multiplier: 0.5
+
+prices:
+  opus-5.5:       {input: 4.00,  output: 20.00, cache_read: 0.20,  cache_write: 5.00,  verified: false, source: "Anthropic list price; Bedrock model card cited in plan", checked: null}
+  sonnet-5.5:     {input: 2.00,  output: 10.00, cache_read: 0.20,  cache_write: 2.50,  verified: false, source: "Anthropic list price; Bedrock price unconfirmed", checked: null}
+  gpt-6-sol:      {input: 2.00,  output: 10.00, cache_read: 0.20,  cache_write: 2.00,  verified: false, source: "Bedrock model card (plan ref 8)", checked: null}
+  gpt-6-luna:     {input: 0.10,  output: 0.50,  cache_read: 0.10,  cache_write: 0.10,  verified: false, source: "third-party aggregator (plan ref 38)", checked: null}
+  gpt-6-astra:    {input: 10.00, output: 50.00, cache_read: 10.00, cache_write: 10.00, verified: false, source: "plan", checked: null}
+  grok-4.6:       {input: 1.00,  output: 3.00,  cache_read: 1.00,  cache_write: 1.00,  verified: false, source: "plan; unclear whether already Flex", checked: null}
+  kimi-k3:        {input: 1.50,  output: 7.50,  cache_read: 1.50,  cache_write: 1.50,  verified: false, source: "Bedrock model card (plan ref 39)", checked: null}
+  deepseek-v3.2:  {input: 0.62,  output: 1.85,  cache_read: 0.62,  cache_write: 0.62,  verified: false, source: "AWS pricing page (plan ref 11; PI table)", checked: null}
+  glm-5:          {input: 1.00,  output: 3.20,  cache_read: 1.00,  cache_write: 1.00,  verified: false, source: "plan", checked: null}
+  qwen3-next-80b: {input: 0.15,  output: 1.20,  cache_read: 0.15,  cache_write: 0.15,  verified: false, source: "plan", checked: null}
+  gpt-oss-120b:   {input: 0.155, output: 0.62,  cache_read: 0.155, cache_write: 0.155, verified: false, source: "PI table from AWS pricing page", checked: null}
+  qwen3-32b:      {input: 0.20,  output: 0.78,  cache_read: 0.20,  cache_write: 0.20,  verified: false, source: "PI table from AWS pricing page", checked: null}
+  # Used only by the offline dry-run (mock client); never billed.
+  mock:           {input: 1.00,  output: 5.00,  cache_read: 0.10,  cache_write: 1.25,  verified: true,  source: "dry-run only", checked: null}

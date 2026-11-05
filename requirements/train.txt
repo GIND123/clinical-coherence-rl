@@ -1,0 +1,10 @@
+# Track B: local training (GPU workstation). Install torch for your CUDA
+# version first, e.g. for CUDA 12.8 / Blackwell:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+-r analysis.txt
+transformers>=4.51
+peft>=0.13
+accelerate>=1.0
+datasets>=3.0
+huggingface_hub>=0.24
+# Optional, much faster rollouts:  pip install vllm>=0.9

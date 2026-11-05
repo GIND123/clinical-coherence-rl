@@ -1,0 +1,8 @@
+# Bayesian teaching: SFT on the corpus reference posterior.
+base: base.yaml
+method: sft
+sft_source: kb_bayes
+sft_examples: 8000
+lr: 1.0e-4
+batch_size: 8
+epochs: 1.0

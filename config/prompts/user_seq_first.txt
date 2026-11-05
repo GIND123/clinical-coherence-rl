@@ -1,0 +1,4 @@
+{candidates_section}Vignette (initial information; more findings may follow later):
+{vignette}
+
+Give your answer as the JSON object described above, based on the information available so far.

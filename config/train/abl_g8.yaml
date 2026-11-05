@@ -1,0 +1,3 @@
+base: base.yaml
+group_size: 8
+contrast_size: 4

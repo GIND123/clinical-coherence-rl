@@ -1,0 +1,12 @@
+TASK: MCR_VERIFICATION
+You are an independent checker for a research dataset. You receive a published case presentation, its final diagnosis, and a structured extraction produced by another system. Check the extraction strictly against the source. Return ONE JSON object and nothing else (no Markdown, no code fence) with these keys:
+
+"unsupported": list of finding ids whose "text" is not fully supported by the source, adds information, or changes a number or unit.
+"paraphrase_not_equivalent": list of finding ids whose "paraphrase" does not mean exactly the same as its "text".
+"reveals_diagnosis": list of finding ids that state, name, or directly give away the final diagnosis or a synonym of it.
+"stage_errors": list of finding ids whose stage is clearly wrong (0 = presenting complaint and history; 1 = examination at presentation; 2 = initial investigations; 3 = later investigations, course, or treatment response).
+"distractors_invalid": list of distractor indices (0-based) that are a synonym, subtype, superset, or complication of the final diagnosis, or duplicate another distractor, or are not a real diagnosis.
+"final_diagnosis_ok": true if "final_diagnosis" is a faithful standard name for the authors' final diagnosis, else false.
+"comment": at most 30 words.
+
+Use empty lists when everything is correct.

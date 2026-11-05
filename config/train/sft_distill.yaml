@@ -1,0 +1,8 @@
+# SFT on GPT-6 Sol distillation answers (needs the panel export).
+base: base.yaml
+method: sft
+sft_source: distill
+export_dir: runs/export
+lr: 1.0e-4
+batch_size: 8
+epochs: 2.0

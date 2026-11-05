@@ -1,0 +1,11 @@
+# Track A: everything needed to run the paid Bedrock panel and the offline QA.
+# boto3/botocore are pinned EXACTLY: request parameters (serviceTier,
+# outputConfig.effort, cachePoint) are validated client-side against the
+# botocore service model, and this is the version the harness was tested with.
+boto3==1.43.124
+botocore==1.43.124
+PyYAML>=6.0,<7
+numpy>=1.26,<3
+pandas>=2.1,<4
+pyarrow>=14
+tqdm>=4.66

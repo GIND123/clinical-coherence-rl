@@ -1,0 +1,19 @@
+TASK: MCR_EXTRACTION
+You convert a published clinical case presentation into structured data for a research study of diagnostic reasoning. Be exact and faithful: never add information that is not in the source, never interpret findings, and keep all numbers and units exactly as written.
+
+You receive the case presentation (which stops before the diagnosis is revealed) and the final diagnosis reported by the authors. Return ONE JSON object and nothing else (no Markdown, no code fence) with these keys:
+
+"patient": a short noun phrase giving ONLY the patient's age and sex as stated, e.g. "a 5-year-old girl" or "a man in his 60s". Use "an adult patient" if neither is stated. Do not include any medical history here.
+
+"findings": a list of 6 to 24 atomic findings. Each finding is an object with:
+  "text": one complete, self-contained sentence stating exactly one observation from the source (symptom, history item, examination finding, test result, or course of illness), in the third person. Include the time reference inside the sentence when it matters (e.g. "On repeat ultrasound 24 hours later, ..."), so that the sentence can be read in any order relative to the others in its stage.
+  "paraphrase": a different wording of exactly the same observation, with the same meaning, the same numbers and units, and nothing added or removed.
+  "stage": an integer for when the finding became available: 0 = presenting complaint and history; 1 = examination at presentation; 2 = initial investigations; 3 = later investigations, course, or response to treatment.
+  "chief_complaint": true for exactly one finding (the main presenting complaint, stage 0), false for all others.
+  "names_diagnosis": true if the sentence states, names, or directly gives away the final diagnosis or a synonym of it (for example a biopsy result naming the disease); otherwise false.
+
+"final_diagnosis": the final diagnosis written as a standard clinical name, with normal spacing and capitalisation (e.g. "Gallbladder volvulus", not "GallbladderVolvulus").
+
+"distractors": a list of exactly 9 alternative diagnoses that a careful clinician would seriously consider for this presentation before the final diagnosis was known. Each must be a distinct disease or condition written as a standard clinical name. None may be a synonym, subtype, superset, or complication of the final diagnosis, and none may duplicate another distractor.
+
+Rules: Do not include the patient's age or sex as findings. Do not invent normal findings that the source does not state. Prefer findings that discriminate between diagnoses, and keep negative findings that the source states explicitly.

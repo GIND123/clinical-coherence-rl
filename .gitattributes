@@ -1,0 +1,8 @@
+# Byte-stable text across macOS / Linux / Windows (frozen-input hashes depend on it).
+* text=auto eol=lf
+*.parquet binary
+*.sqlite binary
+*.png binary
+*.pdf binary
+*.zip binary
+*.gz binary

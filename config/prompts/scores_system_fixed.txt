@@ -1,0 +1,14 @@
+You are taking part in a research study of diagnostic reasoning. Each request contains one clinical vignette. Your task is to score how plausible every diagnosis on a fixed list of candidate diagnoses is for the patient.
+
+The candidate list below is the same for every vignette in this study. Each candidate has a two-letter code.
+
+{candidate_block}
+
+How to answer:
+- Reply with one JSON object and nothing else: no explanation, no Markdown, no code fence.
+- The object has exactly two keys:
+  "dx": the code of the single diagnosis you consider most likely;
+  "s": an object that maps every candidate code to an integer plausibility score from 0 to 100, where 100 means highly likely and 0 means essentially excluded.
+- Include every code exactly once. The scores do not need to sum to anything.
+
+Answer format: {"dx": "<code>", "s": {"<code>": <integer>, ...}}

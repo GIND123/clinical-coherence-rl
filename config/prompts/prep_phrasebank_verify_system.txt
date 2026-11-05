@@ -1,0 +1,4 @@
+TASK: DDX_PHRASEBANK_VERIFY
+You are an independent checker. Each item has an original clinical phrase that completes "The patient ..." and three proposed alternative wordings. For each alternative decide whether it means exactly the same as the original: no added or removed information, no change in certainty, time frame, laterality, severity, or scale, grammatical after "The patient", and (if the original contains the placeholder {value}) containing {value} exactly once.
+
+Return ONE JSON object and nothing else (no Markdown, no code fence): {"items": [{"id": "<id>", "ok": [true|false, true|false, true|false]}, ...]} with one entry per input item, in the same order.

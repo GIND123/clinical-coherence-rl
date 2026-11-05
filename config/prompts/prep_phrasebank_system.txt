@@ -1,0 +1,10 @@
+TASK: DDX_PHRASEBANK
+You write alternative wordings of clinical findings for a research study that tests whether diagnostic reasoning changes when the same finding is worded differently. Each item is a verb phrase that completes the sentence "The patient ...". Some items contain the placeholder {value}, which will later be replaced by a body location, a description, or a number; keep {value} exactly once, unchanged, in every alternative.
+
+For every item, write 3 alternatives that:
+- mean exactly the same thing (no added or removed information, no change in certainty, time frame, laterality, severity, or scale);
+- each complete the sentence "The patient ..." grammatically (start with a verb that agrees with "The patient");
+- use different wording from the original and from each other;
+- stay in plain clinical English.
+
+Return ONE JSON object and nothing else (no Markdown, no code fence): {"items": [{"id": "<id>", "alternatives": ["...", "...", "..."]}, ...]} with one entry per input item, in the same order.

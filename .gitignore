@@ -1,0 +1,33 @@
+# --- environments / caches ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# --- secrets: never commit credentials ---
+.env
+*.pem
+.aws/
+
+# --- raw corpora (downloaded; md5/sha256-pinned in config/study.yaml) ---
+/data/
+
+# --- run outputs: ledger, raw responses, exports, training runs ---
+# Archived via `ccrl archive pack` (Zenodo / institutional storage), not git.
+/runs/
+
+# --- credentialed clinical data must never enter this repo ---
+**/mimic*/
+**/physionet*/
+*discharge.csv*
+*radiology.csv*
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

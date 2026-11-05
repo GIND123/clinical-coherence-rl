@@ -1,0 +1,54 @@
+# =============================================================================
+# Spend controls. Enforced by the runner on EVERY call, before it is sent.
+#
+# committed = (cost of finished calls) + (worst-case reservation of in-flight
+#             calls) + (estimated cost of calls whose outcome is uncertain,
+#             e.g. client timeouts that the server may still have billed)
+# A call is dispatched only if committed + its own worst-case reservation
+# stays under every applicable cap. Worst case = actual input tokens (counted
+# locally, rounded up) x input price + max_tokens x output price.
+# =============================================================================
+
+credit_usd: 1100.00
+
+# Absolute cap across ALL jobs (prep + pilot + panel + arms). The remaining
+# $100 of credit is the reserve for Cost Explorer lag and price drift.
+hard_cap_usd: 1000.00
+
+# A job of priority C may start only if total committed spend is at or below
+# this when it is launched (decision date in study.yaml).
+priority_c_gate_usd: 700.00
+
+# Per-job caps (USD). A job stops dispatching when its own cap is reached.
+# Sized at about the HIGH scenario of the pre-pilot forecast (docs/budget.md);
+# the hard cap above is the binding protection.
+job_caps_usd:
+  probe: 5.00
+  prep_phrasebank: 10.00
+  prep_mcr_extract: 70.00
+  prep_mcr_verify: 25.00
+  pilot: 45.00
+  panel_main: 600.00
+  effort_arm: 240.00
+  sequential: 80.00
+  distill: 40.00
+  astra_ceiling: 120.00
+  panel_ext: 260.00
+
+# Per-model cap as a multiple of that model's expected spend in the forecast
+# for the job being run (computed from pilot medians once the pilot exists).
+per_model_cap_multiplier: 1.3
+
+# Console alerts printed by the runner when total committed spend crosses these.
+alert_levels_usd: [250, 500, 750, 900]
+
+# Token assumptions for the forecast BEFORE the pilot exists (per call).
+# After the pilot, `ccrl plan` uses measured medians / p90s instead.
+forecast_tokens:
+  input_default: 1900
+  output:
+    low:    {low: 500,  expected: 800,  high: 1500}
+    medium: {low: 1000, expected: 1600, high: 2500}
+    high:   {low: 2000, expected: 3000, high: 5000}
+    provider_default: {low: 600, expected: 1200, high: 2500}
+  retry_overhead: {low: 0.05, expected: 0.08, high: 0.12}

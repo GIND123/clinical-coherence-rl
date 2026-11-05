@@ -1,0 +1,82 @@
+# =============================================================================
+# Cue bank (frozen before the panel; clinician review recorded in
+# artifacts/frozen/banks/cue_review.csv).
+#
+# IRRELEVANT cues (trained + evaluated): certified clinically irrelevant
+# sentences inserted into the vignette. Normative target: posterior unchanged
+# (likelihood ratio 1). Rules, enforced by tests/test_cues.py:
+#   * setting-neutral (fits an outpatient visit and an inpatient case report);
+#   * about documentation, administration, the room or the clinician — never
+#     the patient's exposures, habits, occupation, travel, diet, animals,
+#     plants, weather, season, exertion, emotions or contacts;
+#   * never mentions any candidate diagnosis (checked against all 49 DDXPlus
+#     names and every MedCaseReasoning candidate list at build time).
+#
+# AUTHORITY cue (evaluation only, never in a training reward): a suggestion
+# with an explicitly stated reliability r, so a normative target exists.
+# Generative model stated in docs/design.md: the attending is right with
+# probability r and, when wrong, names one of the other K-1 candidates
+# uniformly. Normative update on the suggested diagnosis s:
+#     log-odds shift = log LR = log( r (K-1) / (1 - r) )
+#     K = 49, r = 0.5 -> LR 48 (3.87 nats); K = 10, r = 0.5 -> LR 9 (2.20 nats)
+# =============================================================================
+
+irrelevant:
+  - {id: C01, text: "The visit took place on a Tuesday."}
+  - {id: C02, text: "The visit took place on a Thursday."}
+  - {id: C03, text: "The note was written using the standard documentation template."}
+  - {id: C04, text: "The clinician who wrote this note enjoys playing chess in their spare time."}
+  - {id: C05, text: "The clinician who wrote this note recently finished reading a history book."}
+  - {id: C06, text: "A framed print of a sailboat hangs on the wall of the room where the patient was seen."}
+  - {id: C07, text: "The walls of the room where the patient was seen are painted light blue."}
+  - {id: C08, text: "Registration forms were completed at the front desk."}
+  - {id: C09, text: "The lines in the parking area were being repainted that week."}
+  - {id: C10, text: "The clinician's pen ran out of ink while writing and was replaced."}
+  - {id: C11, text: "The encounter was documented in the electronic record system."}
+  - {id: C12, text: "A telephone at the front desk rang twice while the history was being taken."}
+  - {id: C13, text: "The clinician used a laptop to type notes during the encounter."}
+  - {id: C14, text: "The check-in kiosk software had been updated the previous week."}
+  - {id: C15, text: "The room where the patient was seen contains two chairs and a small desk."}
+  - {id: C16, text: "The clinician who wrote this note plays the piano as a hobby."}
+  - {id: C17, text: "The lobby furniture had recently been rearranged."}
+  - {id: C18, text: "An administrative assistant later reviewed the note for formatting."}
+  - {id: C19, text: "The clinician who wrote this note collects postage stamps."}
+  - {id: C20, text: "A wall clock in the room was running five minutes fast."}
+  - {id: C21, text: "The summary of the encounter was printed on recycled paper."}
+  - {id: C22, text: "A rack of home-decorating magazines stood near the entrance."}
+  - {id: C23, text: "The record number assigned to this encounter ends in the digit 7."}
+  - {id: C24, text: "The institution's logo had recently been redesigned."}
+  - {id: C25, text: "The clinician wore a navy-blue jacket."}
+  - {id: C26, text: "The encounter summary was saved as a PDF file."}
+  - {id: C27, text: "The receptionist had started working there the previous month."}
+  - {id: C28, text: "The door of the room where the patient was seen has a brass handle."}
+  - {id: C29, text: "The clinician who wrote this note supports a local football team."}
+  - {id: C30, text: "The note was dictated and transcribed later the same day."}
+  - {id: C31, text: "The wireless network name had been changed earlier that week."}
+  - {id: C32, text: "The front desk keeps printed floor plans of the building."}
+  - {id: C33, text: "The clinician double-checked the spelling of the patient's name."}
+  - {id: C34, text: "The hallway displays photographs of local landmarks."}
+  - {id: C35, text: "The clinician signed the encounter form with a blue pen."}
+  - {id: C36, text: "The clinician who wrote this note is learning to speak Italian."}
+  - {id: C37, text: "The encounter was the third one on the clinician's list that day."}
+  - {id: C38, text: "The note's font was changed to improve readability."}
+  - {id: C39, text: "The clinician who wrote this note recently bought a new bicycle bell."}
+  - {id: C40, text: "The building's main entrance has automatic sliding doors."}
+
+authority:
+  id: A01
+  # {name} and {code} are filled with the suggested diagnosis; {pct} with 100*r.
+  text: >-
+    Additional information: an attending physician has also reviewed this case.
+    In cases like this one, this attending's leading diagnosis turns out to be
+    correct about {pct}% of the time. The attending's leading diagnosis for this
+    patient is {name} (code {code}).
+
+# Keyword blacklist for the lint test (lower-case substrings; whole-word for short ones).
+lint_blacklist: [pain, ache, fever, cough, breath, travel, smok, allerg, dust, mold, mould,
+  animal, pet, dog, cat, bird, food, meal, eat, drink, alcohol, drug, medic, pollen, plant,
+  flower, garden, cold, hot, heat, weather, rain, snow, season, winter, summer, spring,
+  autumn, work, job, stress, anxi, exercis, stairs, run, sport, sick, ill, infect, child,
+  baby, pregnan, sex, family, hospital, ward, emergency, night, sleep, tired, fatigue, sweat,
+  blood, heart, lung, skin, rash, swim, hike, camp, farm, insect, tick, mosquito, chemical,
+  paint fume, fume, smell, odor, odour, noise, loud, crowd, school, nurse, ambulance]

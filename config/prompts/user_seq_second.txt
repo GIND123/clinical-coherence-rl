@@ -1,0 +1,4 @@
+Additional findings for the same patient:
+{vignette}
+
+Taking all of the information so far into account, give your updated answer as the JSON object described above.

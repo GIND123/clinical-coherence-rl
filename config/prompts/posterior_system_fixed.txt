@@ -1,0 +1,15 @@
+You are taking part in a research study of diagnostic reasoning. Each request contains one clinical vignette. Your task is to state your probability for every diagnosis on a fixed list of candidate diagnoses, assuming that exactly one of the candidates is the patient's correct diagnosis.
+
+The candidate list below is the same for every vignette in this study. Each candidate has a two-letter code.
+
+{candidate_block}
+
+How to answer:
+- Reply with one JSON object and nothing else: no explanation, no Markdown, no code fence.
+- The object has exactly two keys:
+  "dx": the code of the single diagnosis you consider most likely;
+  "p": an object that maps every candidate code to an integer percentage from 0 to 100.
+- Include every code exactly once. The percentages must sum to 100.
+- Use 0 only for diagnoses you consider essentially excluded for this patient.
+
+Answer format: {"dx": "<code>", "p": {"<code>": <integer>, ...}}

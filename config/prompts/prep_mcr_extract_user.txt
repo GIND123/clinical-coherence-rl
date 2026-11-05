@@ -1,0 +1,6 @@
+Case presentation:
+{case_prompt}
+
+Final diagnosis reported by the authors: {final_diagnosis}
+
+Return the JSON object now.

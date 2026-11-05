@@ -1,0 +1,2 @@
+base: base.yaml
+transforms: {perm: 1.0, dup: 1.0, para: 1.0, cue: 0.0}

@@ -1,0 +1,2 @@
+base: base.yaml
+model: Qwen/Qwen3-8B

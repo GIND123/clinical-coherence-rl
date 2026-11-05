@@ -1,0 +1,3 @@
+-r analysis.txt
+pytest>=8
+huggingface_hub>=0.24

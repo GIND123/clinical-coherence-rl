@@ -1,0 +1,9 @@
+Case presentation:
+{case_prompt}
+
+Final diagnosis reported by the authors: {final_diagnosis_raw}
+
+Extraction to check:
+{extraction_json}
+
+Return the JSON object now.

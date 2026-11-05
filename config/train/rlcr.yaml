@@ -1,0 +1,3 @@
+# RLCR-style: correctness + Brier (bounded proper scoring rule; Damani et al.).
+base: base.yaml
+reward: {alpha: 1.0, beta: 0.0, gamma: 0.0, acc_mode: rlcr}

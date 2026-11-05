@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccrl"
+version = "1.0.0"
+description = "Coherence as a Reward: label-free RL for rational belief revision in clinical reasoning models (frozen Bedrock panel + local GRPO training)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Clinical Coherence RL study team" }]
+# Track A (the paid Bedrock panel) needs only these. Versions of boto3/botocore
+# are pinned exactly in requirements/panel.txt; the ranges here are the floor.
+dependencies = [
+  "boto3>=1.43.0",
+  "botocore>=1.43.0",
+  "PyYAML>=6.0",
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "pyarrow>=14",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# Offline analysis of the archived panel (no AWS calls).
+analysis = ["scipy>=1.11", "statsmodels>=0.14", "matplotlib>=3.8"]
+# Rebuilding the frozen inputs from the raw corpora (not needed to run the panel).
+data = ["huggingface_hub>=0.24"]
+# Track B: local training on a GPU workstation.
+train = [
+  "torch>=2.4",
+  "transformers>=4.51",
+  "peft>=0.13",
+  "accelerate>=1.0",
+  "datasets>=3.0",
+]
+vllm = ["vllm>=0.9"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+ccrl = "ccrl.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ccrl = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
