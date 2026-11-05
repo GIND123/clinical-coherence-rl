@@ -1,0 +1,13 @@
+{
+  "heldout": [
+    "Acute laryngitis",
+    "Acute rhinosinusitis",
+    "Boerhaave",
+    "Bronchiectasis",
+    "Chagas",
+    "PSVT",
+    "Panic attack",
+    "Sarcoidosis"
+  ],
+  "rule": "seeded draw per body system (study.yaml)"
+}

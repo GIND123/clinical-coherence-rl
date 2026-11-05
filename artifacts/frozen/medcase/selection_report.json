@@ -1,0 +1,15 @@
+{
+  "seed": 20261105,
+  "eligible": {
+    "test": 891,
+    "train": 12471
+  },
+  "selected": {
+    "pilot": 16,
+    "panel": 210,
+    "train": 2150
+  },
+  "hf_repo": "zou-lab/MedCaseReasoning",
+  "hf_revision": "469a5365bc534b5b2b9cfbc52b2ef2a10f43a339",
+  "license": "MIT (dataset card at pinned revision)"
+}
