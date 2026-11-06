@@ -48,7 +48,8 @@ def test_pricing_cache_semantics_and_flex():
     u = pricing.usage_tokens(OK_RESPONSE["usage"])
     assert u["semantics"] == "exclusive" and u["uncached_input"] == 100
     rep, guard = pricing.cost(OK_RESPONSE["usage"], "kimi-k3", "flex")
-    full = (100 * 1.5 + 1000 * 1.5 + 50 * 7.5) / 1e6
+    p = pricing.price_for("kimi-k3")
+    full = (100 * p.input + 1000 * p.cache_read + 50 * p.output) / 1e6
     assert abs(rep - full * 0.5) < 1e-12 and abs(guard - full * 1.25) < 1e-12
     incl = pricing.usage_tokens({"inputTokens": 1100, "outputTokens": 50, "totalTokens": 1150,
                                  "cacheReadInputTokens": 1000})

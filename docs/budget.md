@@ -42,6 +42,12 @@ low/expected only.
 Largest expected lines: Opus 5.5 panel ($86) and effort arm ($92), Kimi K3
 panel ($50), GPT-6 Sol panel ($48), Sonnet 5.5 panel ($43).
 
+**Price update (5 Nov 2026).** The AWS Price List (us-east-1, Standard) returned prices for 7 of the
+panel models. Kimi K3 ($3.30/$16.50 per 1M) and Grok 4.6 ($2.20/$6.60) are about 2.2x the
+planning figures; the other five match or are slightly lower. With these prices `ccrl plan` gives
+A+B ≈ $370 expected / $650 high before preprocessing (≈ $415 / $720 with it). Opus 5.5,
+Sonnet 5.5 and GPT-6 Sol/Luna are not yet in the Price List API and still use list prices.
+
 After the pilot, `ccrl report pilot` re-forecasts every remaining job from
 measured mean (expected) and p90 (high) output tokens per model.
 
