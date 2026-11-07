@@ -28,9 +28,9 @@ def ws_ready(tmp_path_factory):
 
 
 def test_job_runs_and_is_idempotent(ws_ready):
-    s1 = jobs.run_job("pilot", ws_ready, models_filter=["opus-5.5", "kimi-k3"], limit_cases=2)
+    s1 = jobs.run_job("pilot", ws_ready, models_filter=["gpt-oss-120b", "kimi-k3"], limit_cases=2)
     assert s1["outcome"].get("done", 0) == s1["ran"] > 0
-    s2 = jobs.run_job("pilot", ws_ready, models_filter=["opus-5.5", "kimi-k3"], limit_cases=2)
+    s2 = jobs.run_job("pilot", ws_ready, models_filter=["gpt-oss-120b", "kimi-k3"], limit_cases=2)
     assert s2["ran"] == 0
 
 
@@ -48,6 +48,30 @@ def test_order_gate_and_freeze_violation(ws_ready):
 
 
 def test_budget_stop(ws_ready):
-    s = jobs.run_job("panel_main", ws_ready, models_filter=["opus-5.5"], limit_cases=4, max_spend=0.02,
+    s = jobs.run_job("panel_main", ws_ready, models_filter=["kimi-k3"], limit_cases=4, max_spend=0.02,
                      force_order=True)
     assert s["budget_stop"] and s["outcome"].get("budget_stop", 0) >= 1
+
+
+def test_partner_job_skips_unavailable_models(ws_ready):
+    """partner_panel runs only on partner models that passed their probe;
+    with none available it refuses instead of failing half-way."""
+    specs = M.load_lock(True)
+    panel_only = {k: v for k, v in specs.items() if k not in config.optional_models()}
+    with pytest.raises(SystemExit, match="none of its models"):
+        jobs.plan_tasks("partner_panel", ws_ready, panel_only, limit_cases=1)
+    one = dict(panel_only, **{"sonnet-5.5": specs["sonnet-5.5"]})
+    tasks = jobs.plan_tasks("partner_panel", ws_ready, one, limit_cases=1)
+    assert tasks and {t.model_key for t in tasks} == {"sonnet-5.5"}
+
+
+def test_effort_arm_refuses_without_effort_control(ws_ready):
+    """If the probe degraded gpt-oss-120b to provider default, the three effort
+    levels would be identical requests: the arm must refuse, not pay three times."""
+    import dataclasses
+    specs = M.load_lock(True)
+    tasks = jobs.plan_tasks("effort_arm", ws_ready, specs, limit_cases=1)
+    assert {t.effort for t in tasks} == {"low", "medium", "high"}
+    specs["gpt-oss-120b"] = dataclasses.replace(specs["gpt-oss-120b"], effort_strategy="none")
+    with pytest.raises(SystemExit, match="no working reasoning-effort control"):
+        jobs.plan_tasks("effort_arm", ws_ready, specs, limit_cases=1)

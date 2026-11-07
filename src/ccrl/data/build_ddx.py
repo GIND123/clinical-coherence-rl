@@ -8,7 +8,7 @@ Writes, under artifacts/frozen/ddxplus/:
     heldout.json       the 8 pathologies held out of Track B training
     cases.jsonl        every case the study will ever show a model:
                        pilot (20), panel (300; flags core/sequential),
-                       panel_ext (300, priority C2), distill (2,000, train split)
+                       panel_ext (300, replication sample), distill (2,000, train split)
     build_report.json  selection counts, KB-Bayes fit to the shipped differentials
 
 Everything is a deterministic function of the raw files (md5-checked) and the

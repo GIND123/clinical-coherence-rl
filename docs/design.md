@@ -2,7 +2,9 @@
 
 This is the methodology the code implements, item by item, with every
 deviation from the planning document ("Coherence as a Reward: … under a
-$1,100 Bedrock budget") and its reason. Configuration lives in `config/`;
+$1,100 Bedrock budget") and its reason. The problem statement, research
+questions and the change to an open-weight panel are in
+[problem_statement.md](problem_statement.md). Configuration lives in `config/`;
 nothing below is hard-coded elsewhere.
 
 ## 1. Data
@@ -14,9 +16,9 @@ nothing below is hard-coded elsewhere.
 | Candidates | 49 pathologies, fixed alphabetical list, codes `AA`…`BW` | gold + 9 extracted distractors, order shuffled per case (seeded), codes `AA`…`AJ` |
 | Unit of evidence | finding unit = parent question + its descriptors (pain + location/character/intensity…) | one atomic finding sentence (LLM-extracted, verified) |
 | Exchangeability | chief complaint fixed first; symptom block, then antecedent block; units exchangeable within a block | chief complaint fixed first; findings exchangeable within a time class (0 history, 1 exam, 2 initial investigations, 3 later course) |
-| Panel | 300 test cases: 6 per pathology × 49 + 6 random (all 49 pathologies covered) | 150 test cases (first 150 passing verification in a frozen seeded order) |
+| Panel (confirmatory) | 300 test cases: 6 per pathology × 49 + 6 random (all 49 pathologies covered) | 300 test cases (first 300 passing verification in a frozen seeded order of 420) |
 | Pilot | 20 disjoint test cases | 10 disjoint test cases |
-| Extension (C2) | 300 further test cases | — |
+| Replication sample | 300 further test cases (6 per pathology × 49 + 6) | — |
 | Training | train split, 8 held-out pathologies excluded (seeded draw per body system) | 2,000 train-split cases, gold never used in the label-free reward |
 
 Selection filters: DDXPlus cases have 7–14 finding units and ≤ 34 tokens;
@@ -31,10 +33,10 @@ NLL of the true pathology on training patients (top-1 0.98). Its JSD to the
 released differentials (0.57) is reported, not used — those differentials are
 far flatter than any positives-only posterior.
 
-**MedCaseReasoning preprocessing** (paid, before the panel): GPT-6 Sol extracts
+**MedCaseReasoning preprocessing** (paid, before the panel): Kimi K3 extracts
 patient descriptor, atomic findings with paraphrase, time class, chief
 complaint, diagnosis-leak flag, canonical diagnosis name and 9 distractors;
-Claude Sonnet 5.5 (other vendor) verifies support, paraphrase equivalence,
+GLM-5 (other vendor) verifies support, paraphrase equivalence,
 leakage, stage, distractor validity. Finalisation is deterministic (rules in
 `src/ccrl/prep/medcase.py`), runs before any panel call, and a rejected case
 is replaced by the next in the frozen order.
@@ -63,13 +65,24 @@ study (calibration C7) showed the grouped canonical order is systematically
 easier and would contaminate the floor. Retest is a separate API call with the
 identical request.
 
-**Sequential arm** (150 DDXPlus cases, 7 models): the non-fixed findings are
+**Sequential arm** (150 DDXPlus cases, all 6 panel models): the non-fixed findings are
 split into halves E1/E2 (seeded); conversation A gives context + E1, then E2;
 conversation B gives E2, then E1. Final posteriors are compared with each
 other (commutativity) and with the one-shot base answer.
 
 **Effort arm** (core 150: 75 + 75): calls base, perm1, para, cue, ablate,
-retest at medium and high effort for Opus 5.5 and GPT-6 Sol.
+retest at low, medium and high reasoning effort for gpt-oss-120b, the one
+panel model with a documented effort control (`reasoning_effort`). The
+probe checks that the setting changes output length. If the lock shows no
+working effort control, the job refuses to run rather than paying three times
+for identical requests.
+
+**Replication sample** (300 DDXPlus cases, all 10 calls, all 6 models): a
+second, disjoint draw with the same stratification, pre-registered to test
+whether H1 replicates.
+
+**Distillation** (2,000 DDXPlus training renderings): Kimi K3's answers, for
+the SFT-from-teacher baseline in training.
 
 **Pilot only:** an extra call with a 0–100 plausibility schema (key `s`) on the
 base vignette, to test schema dependence (calibration C6 of the previous study).
@@ -82,7 +95,7 @@ MedCaseReasoning: the case-specific list is in the user message. Required
 output: one JSON object `{"dx": "<code>", "p": {"<code>": <int>, …}}`, integer
 percentages over every code summing to 100. No reasoning is requested; any
 reasoning or summary the API returns is archived. No temperature / top-p is
-ever sent (Opus 5.5 rejects them; others run at provider default, recorded).
+ever sent: every model runs at its provider default, and the probe records it.
 No fallback model: a refusal is recorded as a refusal.
 
 Parsing (`src/ccrl/prompts/parse.py`): last JSON object with the key wins;
@@ -124,8 +137,11 @@ committed spend + its worst-case reservation (input estimate at full price +
 max tokens × output price, ×1.25 for unverified prices, no Flex discount)
 stays under the hard cap ($1,000), the job cap and the per-model cap. Attempts
 that timed out after sending stay counted at their reservation. No paid call
-after 18 Dec 2026 23:59. Priority order enforced; priority C gated at $700 and
-10 Dec. Frozen inputs hashed (`ccrl freeze`); paid jobs refuse to run on any
+after 18 Dec 2026 23:59. Priority order enforced; the optional priority-C job
+(`partner_panel`) is gated at $700 committed and runs only on partner models
+that pass a probe. The model lock records a hash of each model's registry
+entry; if the registry changes after a probe, paid jobs refuse until that
+model is re-probed. Frozen inputs hashed (`ccrl freeze`); paid jobs refuse to run on any
 change.
 
 ## 6. Deviations from the planning document
@@ -142,4 +158,7 @@ change.
 | sensitivity without noise floor | floor-subtracted | Correction 1: noise would be rewarded |
 | DDXPlus "2 symptom units" style filters | ≥ 7 units, no per-block minimum | otherwise Larygospasm has no eligible patient |
 | effort arm: 6 calls | base, perm1, para, cue, ablate, retest | keeps a floor for normalisation |
-| preprocessor = GPT-6 Sol | GPT-6 Sol + a different-vendor verifier (Sonnet 5.5) | cross-vendor check of extraction |
+| 11-model panel incl. 5 closed models | 6 open-weight models; closed models optional/exploratory | the account cannot call partner models (problem_statement.md §7) |
+| preprocessor = GPT-6 Sol | Kimi K3 + a different-vendor verifier (GLM-5) | partner models unavailable; cross-vendor check of extraction kept |
+| 150 MedCaseReasoning panel cases | 300 | more real cases at open-weight prices |
+| effort arm on Opus 5.5 / GPT-6 Sol; Astra ceiling | gpt-oss-120b low/medium/high; no ceiling arm | partner models unavailable |

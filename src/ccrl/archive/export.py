@@ -23,7 +23,7 @@ from ccrl.panel import items as I
 from ccrl.util import local_now, now_iso, sha256_file, write_json
 from ccrl.workspace import Workspace
 
-PANEL_JOBS = ("pilot", "panel_main", "effort_arm", "sequential", "distill", "astra_ceiling", "panel_ext")
+PANEL_JOBS = ("pilot", "panel_main", "panel_ext", "effort_arm", "sequential", "distill", "partner_panel")
 
 
 def _df(ledger: Ledger, sql: str) -> pd.DataFrame:

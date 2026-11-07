@@ -53,7 +53,16 @@ def run(ws: Workspace, profile: str | None = None, region: str | None = None, of
     except FileNotFoundError:
         line("FAIL", "DDXPlus frozen inputs missing (artifacts/frozen/ddxplus)")
     sel = paths.FROZEN_MCR / "cases_selected.jsonl"
-    line("OK" if sel.exists() else "FAIL", f"MedCaseReasoning selection {'present' if sel.exists() else 'MISSING'}")
+    if sel.exists():
+        from collections import Counter
+        from ccrl.util import read_jsonl
+        got = Counter(r["role"] for r in read_jsonl(sel))
+        mc = config.study()["medcase"]
+        want_m = {"pilot": mc["pilot_prep"], "panel": mc["panel_prep"], "train": mc["train_prep"]}
+        line("OK" if dict(got) == want_m else "FAIL", f"MedCaseReasoning selection: {dict(got)}"
+             + ("" if dict(got) == want_m else f" (study.yaml expects {want_m}: git pull)"))
+    else:
+        line("FAIL", "MedCaseReasoning selection MISSING")
     line("OK" if ws.phrasebank.exists() else "INFO",
          f"phrase bank {'present' if ws.phrasebank.exists() else 'not built yet (ccrl prep phrasebank)'}")
     line("OK" if ws.mcr_prepared.exists() else "INFO",
@@ -68,9 +77,18 @@ def run(ws: Workspace, profile: str | None = None, region: str | None = None, of
     from ccrl.bedrock.models import lock_doc
     ld = lock_doc()
     if ld:
-        okm = [k for k, m in ld["models"].items() if m.get("probe", {}).get("ok")]
-        bad = [k for k, m in ld["models"].items() if not m.get("probe", {}).get("ok")]
-        line("OK" if not bad else "WARN", f"model lock: {len(okm)} probed OK" + (f"; failed: {bad}" if bad else ""))
+        from ccrl.bedrock.models import stale_lock_models
+        okm = {k for k, m in ld["models"].items() if m.get("probe", {}).get("ok")}
+        panel = config.panel_models()
+        roles = set(config._models_raw()["roles"].values())
+        need = [k for k in panel if k not in okm] + [k for k in sorted(roles) if k not in okm and k not in panel]
+        line("OK" if not need else "FAIL", f"model lock: {len([k for k in panel if k in okm])}/{len(panel)} panel "
+             f"models probed OK" + (f"; missing or failed: {need}" if need else ""))
+        opt_ok = [k for k in config.optional_models() if k in okm]
+        line("INFO", f"optional partner models available: {opt_ok or 'none'} (only the exploratory partner_panel uses them)")
+        stale = stale_lock_models(ld)
+        if stale:
+            line("FAIL", f"probe results are stale for {stale} (registry changed): ccrl models probe --models {','.join(stale)}")
     else:
         line("INFO", "model lock not created yet (ccrl models resolve; ccrl models probe)")
     unv = [k for k, p in config.prices()["prices"].items() if not p.get("verified") and k != "mock"]

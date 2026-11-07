@@ -90,9 +90,14 @@ What no verified work does, and this project does:
    identifies the Bayes posterior (Prop. 3); and two design findings
    (docs/theory.md) showing that a per-rollout sensitivity term — the obvious
    design — prefers over-reacting reasoners under redundant evidence.
-4. A **frozen, archived frontier panel** (11 hosted models, effort and
-   sequential arms) measured with the same estimands as the trained models,
-   normalised to each model's retest floor.
+4. A **frozen, archived open-weight panel** (6 locally deployable models;
+   replication, effort and sequential arms), measured with the same
+   estimands as the trained models and normalised to each model's retest
+   floor. A trained 4B/8B model can therefore be compared directly with
+   open-weight models many times its size, including its own family (H6).
+   Most clinical LLM evaluations centre closed APIs. Open-weight models are
+   the ones a hospital can run on-premises with patient data, and the only
+   ones the results can be acted on with (by retraining).
 
 What we must not claim: "first coherence training" (Kim et al.; Yamin et al.;
 Irpan et al.; Co-rewarding), "first clinical belief-updating evaluation"

@@ -135,6 +135,18 @@ def panel_models() -> list[str]:
     return list(_models_raw()["panel"])
 
 
+def optional_models() -> list[str]:
+    """Registry entries marked `optional: true` (partner models the account
+    cannot call). They are probed or called only when named explicitly."""
+    return [k for k, m in _models_raw()["models"].items() if m.get("optional")]
+
+
+def study_models() -> list[str]:
+    """Models the study depends on: everything in the registry except optional ones."""
+    opt = set(optional_models())
+    return [k for k in _models_raw()["models"] if k not in opt]
+
+
 def role_model(role: str) -> str:
     return _models_raw()["roles"][role]
 
@@ -163,12 +175,20 @@ def validate_all() -> list[str]:
             problems.append(f"models.{k}: no row in prices.yaml")
         if not m.id_candidates and not m.match:
             problems.append(f"models.{k}: needs id_candidates or match")
+    opt = set(optional_models())
     for k in raw.get("panel", []):
         if k not in ms:
             problems.append(f"panel: unknown model {k!r}")
+        elif k in opt:
+            problems.append(f"panel: {k!r} is marked optional; the panel must use available models")
     for role, k in raw.get("roles", {}).items():
         if k not in ms:
             problems.append(f"roles.{role}: unknown model {k!r}")
+        elif k in opt:
+            problems.append(f"roles.{role}: {k!r} is marked optional")
+    rk = raw.get("roles", {})
+    if rk.get("preprocessor") in ms and rk.get("verifier") in ms and             ms[rk["preprocessor"]].vendor == ms[rk["verifier"]].vendor:
+        problems.append("roles: verifier must be from a different vendor than the preprocessor")
     st = study()
     tsets = st["transform_sets"]
     for name, j in jobs().items():
@@ -187,6 +207,10 @@ def validate_all() -> list[str]:
                     if mk in ms and ms[mk].effort_strategy == "none":
                         problems.append(f"jobs.{name}: effort {e!r} requested for {mk}, "
                                         "which has effort.strategy none")
+        if j.get("priority") not in ("A", "B", "C"):
+            problems.append(f"jobs.{name}: priority must be A, B or C")
+        if j.get("priority") in ("A", "B") and any(mk in opt for mk in job_models(name)):
+            problems.append(f"jobs.{name}: priority {j['priority']} job uses an optional model")
         for dep in j.get("requires_completed", []) or []:
             if dep not in jobs():
                 problems.append(f"jobs.{name}: requires unknown job {dep!r}")

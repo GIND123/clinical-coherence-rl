@@ -2,6 +2,7 @@
 
     ccrl train eval --model Qwen/Qwen3-4B [--adapter runs/train/ccr/final] --name ccr_s0 [--set panel]
     ccrl train compare --ref runs/local_eval/rlvr_s0.parquet --new runs/local_eval/ccr_s0.parquet
+    ccrl train compare --ref runs/export/posteriors.parquet --ref-model qwen3-32b                        --new runs/local_eval/q8_ccr_s0.parquet          # H6: trained vs panel model
 
 Same items, same system/user prompts, same parser and the same estimands as
 the hosted panel, so trained models and frontier models sit in one table.
@@ -89,16 +90,37 @@ def evaluate_local(model_name: str, name: str, adapter: str | None = None, item_
     return dest
 
 
-def estimands_for(parquet: str, ws: Workspace | None = None) -> dict[str, pd.DataFrame]:
-    ws = ws or Workspace(False)
+def load_posteriors(parquet: str, model: str | None = None, job: str | None = None) -> pd.DataFrame:
+    """A local-eval parquet, or the panel export (runs/export/posteriors.parquet)
+    narrowed to one model and job, so trained and panel models compare on the
+    same items. The panel export holds several models: `model` is then required."""
     post = pd.read_parquet(parquet)
+    if model is not None:
+        post = post[post["model_key"] == model]
+    if job is None and "job" in post and post["job"].nunique() > 1:
+        job = "panel_main" if (post["job"] == "panel_main").any() else None
+    if job is not None:
+        post = post[post["job"] == job]
+    if post.empty:
+        raise SystemExit(f"{parquet}: no rows for model={model!r} job={job!r}")
+    if post["model_key"].nunique() > 1:
+        raise SystemExit(f"{parquet} holds several models {sorted(post['model_key'].unique())}: pass --ref-model/--new-model")
+    return post
+
+
+def estimands_for(parquet: str, ws: Workspace | None = None, model: str | None = None,
+                  job: str | None = None) -> dict[str, pd.DataFrame]:
+    ws = ws or Workspace(False)
+    post = load_posteriors(parquet, model, job)
     ci = {r["case_id"]: r for r in read_jsonl(ws.items_dir / "case_index.jsonl")}
     return analyze(post, I.load_items(ws), ci)
 
 
-def compare(ref: str, new: str, margin_top1: float = 0.02, ws: Workspace | None = None) -> pd.DataFrame:
-    """Paired, case-level comparison of two evaluated models (H2/H3)."""
-    a, b = estimands_for(ref, ws), estimands_for(new, ws)
+def compare(ref: str, new: str, margin_top1: float = 0.02, ws: Workspace | None = None,
+            ref_model: str | None = None, new_model: str | None = None) -> pd.DataFrame:
+    """Paired, case-level comparison of two evaluated models (H2/H3; H6 with a
+    panel model as `ref`)."""
+    a, b = estimands_for(ref, ws, ref_model), estimands_for(new, ws, new_model)
     pa, pb = a["per_case"], b["per_case"]
     out = []
     for ds in sorted(set(pa["dataset"]) & set(pb["dataset"])):

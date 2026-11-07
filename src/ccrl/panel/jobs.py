@@ -10,7 +10,7 @@ from ccrl.panel.freeze import check_freeze
 from ccrl.util import local_now, parse_local
 from ccrl.workspace import Workspace
 
-PRIORITY_RANK = {"A": 0, "B": 1, "C1": 2, "C2": 3}
+PRIORITY_RANK = {"A": 0, "B": 1, "C": 2}
 
 
 def job_transforms(job: dict) -> list[str]:
@@ -46,10 +46,19 @@ def plan_tasks(job_name: str, ws: Workspace, specs: dict, models_filter: list[st
     model_keys = config.job_models(job_name)
     if models_filter:
         model_keys = [m for m in model_keys if m in models_filter]
+    if job.get("skip_unavailable"):
+        model_keys = [m for m in model_keys if m in specs]
+        if not model_keys:
+            raise SystemExit(f"{job_name}: none of its models has a passing probe "
+                             f"({config.job_models(job_name)}); nothing to run.")
     for mk in model_keys:
         if mk not in specs:
             raise SystemExit(f"model {mk} is not in the lock (or failed its probe); run `ccrl models probe`.")
         spec = specs[mk]
+        if any(e != "default" for e in job.get("efforts", ["default"])) and spec.effort_strategy == "none":
+            raise SystemExit(f"{job_name}: {mk} has no working reasoning-effort control in the lock "
+                             "(the probe found it ignored or rejected), so its effort levels would be "
+                             "identical requests. Not run.")
         for effort in job.get("efforts", ["default"]):
             for iid in item_ids:
                 it = items[iid]
@@ -94,8 +103,9 @@ def check_preconditions(job_name: str, ws: Workspace, ledger: Ledger, force_orde
         if spent > gate and not allow_c:
             raise SystemExit(f"Priority {job['priority']} gate: committed ${spent:.2f} > ${gate:.2f}. "
                              "Not launched (pass --override-c-gate only with the PI's approval).")
-        dd = parse_local(config.study()["dates"]["priority_c_decision"] + "T00:00:00")
-        if local_now() < dd and not allow_c:
+        dec = config.study()["dates"].get("priority_c_decision")
+        dd = parse_local(dec + "T00:00:00") if dec else None
+        if dd is not None and local_now() < dd and not allow_c:
             raise SystemExit(f"Priority C jobs wait for the decision date {dd.date()} (or --override-c-gate).")
 
 

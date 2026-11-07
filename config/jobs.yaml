@@ -1,9 +1,10 @@
 # =============================================================================
 # Paid jobs. Each job = item set x transform set x models x effort levels.
 # A request's identity is a hash of (job, item, model lock entry, effort,
-# replicate), so re-running a job only sends what has not completed.
+# exact prompt text), so re-running a job only sends what has not completed.
 #
-# priority: A = must run; B = run after A; C1/C2 = only if the C gate passes.
+# priority: A = confirmatory core; B = pre-registered secondary arms (run after
+# A); C = optional exploratory (only if the C gate passes).
 # Run order is enforced: a B job refuses to start while any A job is
 # incomplete, unless --force-order is given.
 # =============================================================================
@@ -11,7 +12,7 @@
 jobs:
   pilot:
     priority: A
-    description: 30 disjoint cases x (10 calls + 1 schema variant) x 11 panel models
+    description: 30 disjoint cases (20 DDXPlus + 10 MedCaseReasoning) x (10 calls + 1 schema variant) x 6 panel models
     item_set: pilot
     transform_set: pilot
     models: panel
@@ -19,54 +20,55 @@ jobs:
 
   panel_main:
     priority: A
-    description: 450 cases (300 DDXPlus + 150 MedCaseReasoning) x 10 calls x 11 panel models
+    description: 600 cases (300 DDXPlus + 300 MedCaseReasoning) x 10 calls x 6 panel models (confirmatory)
     item_set: panel
     transform_set: all10
     models: panel
     efforts: [default]
     requires_completed: [pilot]
 
+  panel_ext:
+    priority: B
+    description: replication sample, 300 further DDXPlus cases x 10 calls x 6 panel models
+    item_set: panel_ext
+    transform_set: all10
+    models: panel
+    efforts: [default]
+    requires_completed: [panel_main]
+
   effort_arm:
     priority: B
-    description: core 150 (75+75) x 6 calls x {medium, high} for Opus 5.5 and GPT-6 Sol
+    description: core 150 (75 + 75) x 6 calls x reasoning effort {low, medium, high} for gpt-oss-120b
     item_set: core
     transform_set: effort6
-    models: [opus-5.5, gpt-6-sol]
-    efforts: [medium, high]
+    models: [gpt-oss-120b]
+    efforts: [low, medium, high]
     requires_completed: [panel_main]
 
   sequential:
     priority: B
-    description: 150 DDXPlus cases x 2 orders x 2 turns x 7 models
+    description: 150 DDXPlus cases x 2 orders x 2 turns x 6 panel models
     item_set: sequential
     transform_set: sequential
-    models: [opus-5.5, gpt-6-sol, sonnet-5.5, kimi-k3, glm-5, deepseek-v3.2, gpt-6-luna]
+    models: panel
     efforts: [default]
     requires_completed: [panel_main]
 
   distill:
     priority: B
-    description: 2,000 DDXPlus training renderings x GPT-6 Sol (SFT-from-frontier baseline)
+    description: 2,000 DDXPlus training renderings x Kimi K3 (teacher for the SFT-from-teacher baseline)
     item_set: distill
     transform_set: base_only
-    models: [gpt-6-sol]
+    models: [kimi-k3]
     efforts: [default]
     requires_completed: [panel_main]
 
-  astra_ceiling:
-    priority: C1
-    description: core 150 x 6 calls x GPT-6 Astra (low effort)
-    item_set: core
-    transform_set: effort6
-    models: [gpt-6-astra]
-    efforts: [default]
-    requires_completed: [panel_main]
-
-  panel_ext:
-    priority: C2
-    description: +300 DDXPlus cases x 10 calls x 4 frontier models
-    item_set: panel_ext
+  partner_panel:
+    priority: C
+    description: OPTIONAL exploratory - 600 panel cases x 10 calls x whichever partner models AWS enables
+    item_set: panel
     transform_set: all10
-    models: [opus-5.5, gpt-6-sol, sonnet-5.5, kimi-k3]
+    models: [opus-5.5, sonnet-5.5, gpt-6-sol, gpt-6-luna, grok-4.6]
     efforts: [default]
+    skip_unavailable: true        # models without a passing probe are skipped, not an error
     requires_completed: [panel_main]

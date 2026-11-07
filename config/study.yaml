@@ -8,7 +8,7 @@
 # to start until you re-freeze), so the pre-registered design cannot drift.
 # =============================================================================
 
-study_id: ccrl-panel-v1
+study_id: ccrl-v2-open-weight
 seed: 20261105                # master seed; every random draw derives from it
 
 dates:
@@ -16,7 +16,6 @@ dates:
   # machine running the panel). Credit expires end of December; the gap
   # absorbs Cost Explorer lag (~24 h) and any re-run of failed items.
   hard_stop: "2026-12-18T23:59:00"
-  priority_c_decision: "2026-12-10"
   osf_preregistration: "2026-11-14"
 
 # -----------------------------------------------------------------------------
@@ -37,11 +36,11 @@ ddxplus:
   max_units: 14
   max_tokens_per_case: 34
   panel_per_pathology: 6        # 49 x 6 = 294 ...
-  panel_extra_random: 6         # ... + 6 = 300  (priority A)
-  ext_per_pathology: 6          # priority C2 extension: another 300
+  panel_extra_random: 6         # ... + 6 = 300  (confirmatory panel)
+  ext_per_pathology: 6          # replication sample (priority B): another 300
   ext_extra_random: 6
   pilot_cases: 20               # disjoint from panel and extension
-  core_cases: 75                # subset of the panel: effort / Astra arms
+  core_cases: 75                # subset of the panel: effort arm
   sequential_cases: 150         # subset of the panel: two-stage evidence arm
   distill_cases: 2000           # training split, non-held-out pathologies
   likelihood_smoothing: 0.5     # Jeffreys prior on P(token | pathology)
@@ -87,8 +86,8 @@ medcase:
   # fail verification), and how many are USED.
   pilot_prep: 16
   pilot_cases: 10
-  panel_prep: 210
-  panel_cases: 150
+  panel_prep: 420
+  panel_cases: 300
   core_cases: 75                # subset of the panel
   train_prep: 2150
   train_cases: 2000

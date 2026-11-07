@@ -19,7 +19,8 @@ def test_every_module_compiles():
     ["build", "items"], ["freeze", "--check"], ["plan"], ["run", "pilot", "--limit-cases", "2"], ["status"],
     ["report", "pilot"], ["export"], ["archive", "pack"], ["billing", "reconcile", "--start", "2026-11-01"],
     ["analyze"], ["rehearse"], ["train", "run", "--config", "config/train/ccr_acc_fid.yaml"],
-    ["train", "reward-suite"], ["--dry-run", "status"],
+    ["train", "reward-suite"], ["--dry-run", "status"], ["run", "partner_panel"],
+    ["train", "compare", "--ref", "a.parquet", "--new", "b.parquet", "--ref-model", "qwen3-32b"],
 ])
 def test_parser_accepts(argv):
     args = cli.build_parser().parse_args(argv)

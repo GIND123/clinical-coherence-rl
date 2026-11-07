@@ -10,7 +10,7 @@
   probabilities.
 * In this repo (`artifacts/frozen/ddxplus/`): compact KB, token counts from
   the training split, reference-temperature fit, the 8 held-out pathologies,
-  and 2,620 selected cases (pilot, panel, extension, distillation). Raw files
+  and 2,620 selected cases (pilot, panel, replication sample, distillation). Raw files
   are md5-checked by `ccrl data download ddxplus`.
 * Known limits: synthetic; English translation of a French questionnaire;
   findings are positives only (absent findings are not rendered); public since
@@ -24,8 +24,9 @@
   `469a5365bc534b5b2b9cfbc52b2ef2a10f43a339`. **MIT** per the dataset card.
 * 14,489 cases from PubMed Central open-access case reports (train 13,092,
   val 500, test 897); case prompts written to stop before the diagnosis.
-* In this repo (`artifacts/frozen/medcase/cases_selected.jsonl`): 2,376
-  selected cases (pilot/panel/training preprocessing order) with PMCID, title,
+* In this repo (`artifacts/frozen/medcase/cases_selected.jsonl`): 2,586
+  selected cases (16 pilot, 420 panel, 2,150 training, in preprocessing
+  order; the first 300 panel cases that pass verification are used) with PMCID, title,
   journal, date, link, case prompt and the authors' final diagnosis.
 * Sending these texts to Amazon Bedrock is permitted: open access, published,
   de-identified case reports.

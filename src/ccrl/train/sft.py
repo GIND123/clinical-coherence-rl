@@ -4,7 +4,7 @@
 
 Targets (the assistant turn is the posterior JSON in the panel's schema):
   kb_bayes     the corpus reference posterior (Qiu-style Bayesian teaching)
-  distill      GPT-6 Sol's archived answers on the 2,000 distillation items
+  distill      the teacher's (Kimi K3) archived answers on the 2,000 distillation items
                (read from the panel ledger export; SFT-from-frontier)
   bct          bias-augmented consistency training, posterior version: the
                model's OWN answer on the clean rendering x becomes the target

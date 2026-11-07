@@ -33,7 +33,7 @@ from ccrl.bedrock.client import CallSpec, build_request
 from ccrl.bedrock.ledger import Ledger
 from ccrl.bedrock.runner import BudgetGuard, BudgetStop, Executor, Task, task_id
 from ccrl.prompts.parse import parse_posterior
-from ccrl.util import now_iso
+from ccrl.util import now_iso, stable_hash
 from ccrl.workspace import Workspace
 
 PROBE_SYSTEM_PING = "TASK: PROBE_PING\nReply with the single word OK."
@@ -134,6 +134,22 @@ def spec_to_lock(spec: CallSpec, probe: dict) -> dict:
             "concurrency": spec.concurrency, "probe": probe}
 
 
+def registry_sig(key: str) -> str:
+    """Hash of a model's registry entry (config/models.yaml). Stored in the lock
+    at probe time, so a lock made under a different registry entry is detected."""
+    return stable_hash(json.dumps(config.models()[key].raw, sort_keys=True, default=str))
+
+
+def stale_lock_models(doc: dict | None = None) -> list[str]:
+    """Models that passed a probe under a registry entry that has since changed."""
+    doc = doc if doc is not None else lock_doc()
+    if not doc:
+        return []
+    reg = config.models()
+    return [k for k, v in doc.get("models", {}).items()
+            if v.get("probe", {}).get("ok") and k in reg and v.get("registry_sig") != registry_sig(k)]
+
+
 def load_lock(dry_run: bool = False) -> dict[str, CallSpec]:
     """Model specs for paid jobs. Dry runs synthesise a lock from the registry
     (mock IDs, real price keys so cost reports are realistic)."""
@@ -143,6 +159,10 @@ def load_lock(dry_run: bool = False) -> dict[str, CallSpec]:
         raise SystemExit("config/models.lock.yaml not found: run `ccrl models resolve` then `ccrl models probe`.")
     with open(paths.MODELS_LOCK, "r", encoding="utf-8") as f:
         doc = yaml.safe_load(f)
+    stale = stale_lock_models(doc)
+    if stale:
+        raise SystemExit(f"config/models.yaml changed for {stale} since they were probed. Re-probe them "
+                         f"(a few cents): ccrl models probe --models {','.join(stale)}")
     out = {}
     for k, v in doc["models"].items():
         if not v.get("probe", {}).get("ok"):
@@ -319,6 +339,7 @@ def probe(keys: list[str], ws: Workspace, client_factory, ids: dict[str, str], v
             doc["models"][key] = spec_to_lock(spec, {"ok": ok, "warnings": warnings, "toy_parse_ok": toy_ok,
                                                      "toy_dx": pr.dx if pr else None, "effort_check": effort_check,
                                                      "log": log, "at": now_iso()})
+            doc["models"][key]["registry_sig"] = registry_sig(key)
             say(f"[probe] {key}: {'OK' if ok else 'FAILED'} id={spec.model_id} effort={spec.effort_strategy}/"
                 f"{spec.default_effort} tier={spec.service_tier} cache={spec.prompt_cache} "
                 f"fields={list(spec.extra_fields)}" + (f" WARN: {warnings}" if warnings else ""))

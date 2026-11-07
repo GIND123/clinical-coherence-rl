@@ -1,7 +1,13 @@
-# Track B — local training and evaluation
+# Training and local evaluation
 
-Runs on a GPU workstation after the panel is archived (from 19 Dec 2026).
-Nothing here calls Bedrock.
+Runs on a GPU workstation and **can start now**, in parallel with the
+Bedrock panel. Nothing here calls Bedrock. Only two inputs come from the
+panel machine:
+
+* the `distill` job's Kimi K3 answers, for the `sft_distill` baseline;
+* the MedCaseReasoning training extraction, for the `labelfree_mcr` arm.
+
+Everything else needs only the public DDXPlus corpus.
 
 ## Setup
 
@@ -32,7 +38,22 @@ command). Logs: `runs/train/<name>_s<seed>/train_log.jsonl` with reward
 terms, M, the sensitivity gate, invalid fraction, entropy, KL; a run stops
 early if M falls > 30 % below its first-5-step mean (collapse safeguard).
 
-## Grid (plan §6)
+## Order of runs (decisive comparison first)
+
+1. `ccrl train reward-suite`: 10 PASS (CPU, seconds).
+2. Evaluate the untrained base model on the pilot items. Its retest JS sets
+   `tau_I` (95th percentile):
+   `ccrl train eval --model Qwen/Qwen3-4B --name base4b --set pilot`.
+3. **The decisive pair**, 4B, seed 0: `rlvr` and `ccr_acc_fid`, then
+   `ccrl train compare`. If CCR does not beat RLVR on `js_order` and
+   `js_para` here, stop and diagnose before spending GPU-days. Check the
+   per-term reward logs, the M gate, collapse stops and the ablations.
+4. The rest of the 4B grid (3 seeds), then the ablations (1 seed).
+5. 8B: `qwen3_8b_ccr_acc_fid` and `qwen3_8b_rlvr`, 3 seeds each (needed for
+   H6).
+6. Label-free MedCaseReasoning arm (needs the training extraction).
+
+## Grid
 
 | | configs | seeds |
 |---|---|---|
@@ -47,13 +68,29 @@ variants; canonicalisation sorts the findings before rendering;
 neuro-symbolic Bayes (elicited likelihood ratios + code) is the ELR-Fusion
 method of the previous study.
 
+## Scale comparison (H6): trained model vs the Bedrock panel
+
+The panel export and local evaluations share item IDs, parser and estimands.
+Each model is normalised by its own retest floor, so different decoding
+noise does not favour either side.
+
+```bash
+ccrl train eval --model Qwen/Qwen3-8B --adapter runs/train/qwen3_8b_ccr_acc_fid_s0/final --name q8_ccr_s0
+ccrl train compare --ref runs/export/posteriors.parquet --ref-model qwen3-32b --new runs/local_eval/q8_ccr_s0.parquet
+ccrl train compare --ref runs/export/posteriors.parquet --ref-model qwen3-next-80b --new runs/local_eval/q8_ccr_s0.parquet
+```
+
+`runs/export/posteriors.parquet` comes from the panel archive (`ccrl export`
+on the panel machine). `--ref-model` picks one panel model, and its
+`panel_main` rows are used.
+
 ## Reward constants
 
 `delta_S` and `m0` are half the reference posterior's batch-mean contrast
 movement and cross-patient information on DDXPlus training patients
 (printed by `ccrl train reward-suite`: 0.234 and 0.459 at τ = 0.6). `tau_I`
-should be set from the pilot to the 95th percentile of the base model's
-retest JS (default 0.10).
+is the 95th percentile of the untrained base model's retest JS on the pilot
+items (step 2 above; default 0.10).
 
 ## Implementation notes
 

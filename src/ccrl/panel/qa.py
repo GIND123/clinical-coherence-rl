@@ -166,7 +166,7 @@ def forecast_all(ws: Workspace) -> dict:
         if led is not None:
             led.close()
     cum = {}
-    for label, maxrank in (("A", 0), ("A+B", 1), ("A+B+C1", 2), ("A+B+C1+C2", 3)):
+    for label, maxrank in (("A", 0), ("A+B", 1), ("A+B+C", 2)):
         sel = [v for v in jobs.values() if "priority" in v and PRIORITY_RANK[v["priority"]] <= maxrank]
         cum[label] = {s: sum(v[s] for v in sel) for s in ("low", "expected", "high")}
     return {"spent_so_far": spent, "jobs": jobs, "cumulative": cum}

@@ -27,6 +27,8 @@ def add_parser(sub) -> None:
     s.add_argument("--ref", required=True)
     s.add_argument("--new", required=True)
     s.add_argument("--margin", type=float, default=0.02)
+    s.add_argument("--ref-model", default=None, help="model_key inside --ref (needed for the panel export)")
+    s.add_argument("--new-model", default=None, help="model_key inside --new")
     p.set_defaults(fn=run)
 
 
@@ -76,7 +78,7 @@ def run(a: argparse.Namespace) -> int:
         return 0
     if a.taction == "compare":
         from ccrl.train.evaluate import compare
-        df = compare(a.ref, a.new, a.margin)
+        df = compare(a.ref, a.new, a.margin, ref_model=a.ref_model, new_model=a.new_model)
         print(df.to_string(index=False))
         out = Path(a.new).with_suffix(".compare.csv")
         df.to_csv(out, index=False)

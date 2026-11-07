@@ -67,7 +67,7 @@ def cmd_models(a) -> int:
         print(f"\nwrote {path}" + (f"\nUNRESOLVED: {missing} — check model access in the Bedrock console" if missing else ""))
         return 1 if any(k in missing for k in config.panel_models()) else 0
     if a.action == "probe":
-        keys = _csv(a.models) or list(config.models())
+        keys = _csv(a.models) or config.study_models()   # optional partner models only when named
         if a.dry_run:
             ids = {k: f"mock.{k}" for k in keys}
         else:
