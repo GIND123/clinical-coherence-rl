@@ -4,8 +4,13 @@ Two numbers per call:
   reported cost  — usage x listed price, Flex discount applied when the
                    response says it was served on Flex (what we expect AWS
                    to bill; reconciled against Cost Explorer);
-  guard cost     — usage x listed price x safety factor (unverified rows),
-                   never discounted. The budget guard uses only this.
+  guard cost     — usage x listed price x safety factor (unverified rows).
+                   The budget guard uses only this. The Flex discount is
+                   NOT applied unless prices.yaml sets `guard_counts_flex:
+                   true`, which is done only after Cost Explorer has shown
+                   that Flex calls are billed at the Flex rate
+                   (`ccrl billing reconcile`). Reservations for calls in
+                   flight never use the discount (worst_case below).
 
 Cache semantics: Bedrock reports cacheRead/WriteInputTokens separately.
 Whether `inputTokens` already includes them is detected per response from
@@ -65,8 +70,10 @@ def cost(usage: dict, price_key: str, served_tier: str | None) -> tuple[float, f
     u = usage_tokens(usage)
     base = (u["uncached_input"] * p.input + u["cache_read"] * p.cache_read
             + u["cache_write"] * p.cache_write + u["output"] * p.output) / M
-    mult = float(config.prices().get("flex_multiplier", 0.5)) if (served_tier or "").lower() == "flex" else 1.0
-    return base * mult, base * p.guard_factor
+    flex = (served_tier or "").lower() == "flex"
+    mult = float(config.prices().get("flex_multiplier", 0.5)) if flex else 1.0
+    guard_mult = mult if (flex and bool(config.prices().get("guard_counts_flex", False))) else 1.0
+    return base * mult, base * guard_mult * p.guard_factor
 
 
 def worst_case(input_tokens_est: int, max_tokens: int, price_key: str) -> float:

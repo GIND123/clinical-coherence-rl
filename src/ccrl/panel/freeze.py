@@ -4,7 +4,7 @@
     ccrl freeze --check    verify nothing changed since
 
 Covered: config/*.yaml (including models.lock.yaml; excluding the advisory
-models.resolved.yaml), config/prompts/*.txt, the committed DDXPlus and
+models.resolved.yaml and the spending controls prices.yaml / budget.yaml), config/prompts/*.txt, the committed DDXPlus and
 MedCaseReasoning inputs, the phrase bank, the prepared MedCaseReasoning
 cases and the built items. Paid panel jobs refuse to start when the check
 fails, so the design registered on OSF is exactly the design that runs.
@@ -18,7 +18,10 @@ from ccrl import paths
 from ccrl.util import now_iso, read_json, sha256_file, write_json
 from ccrl.workspace import Workspace
 
-EXCLUDE_NAMES = {"models.resolved.yaml", "FREEZE.json", "build_summary.json"}
+# prices.yaml and budget.yaml are spending controls, not design: they never
+# change what a model is asked, so correcting a price or a cap must not force
+# a re-freeze (and a re-registration) of the study design.
+EXCLUDE_NAMES = {"models.resolved.yaml", "FREEZE.json", "build_summary.json", "prices.yaml", "budget.yaml"}
 
 
 def covered_files(ws: Workspace) -> dict[str, Path]:

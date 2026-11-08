@@ -45,6 +45,14 @@ Then continue at step 3. Step 2 explains what the probe output means.
    paid run will behave the same way.
 5. **Do not edit `config/` or `artifacts/frozen/` after `ccrl freeze`.** The
    panel refuses to run if anything that defines the prompts changed.
+   (Exceptions: `config/prices.yaml` and `config/budget.yaml` are spending
+   controls and can be corrected at any time.)
+
+**Keeping a detached job alive on a Mac:** plug in the power, keep the lid
+open (closing it sleeps the Mac even with `caffeinate`), and start jobs from
+a normal Terminal window rather than from inside an AI assistant's shell,
+which may stop background processes when its session ends. If a job stops
+anyway, run the same command again: finished calls are never repeated.
 
 ---
 
@@ -112,13 +120,17 @@ so this only makes the caps tighter, never looser.
 
 ---
 
-## 4. Preprocessing (≈2–3 hours wall time, ≈$25 now + ≈$40–100 later)
+## 4. Preprocessing (≈2–3 hours wall time, ≈$30 now + ≈$140 later)
 
 ```bash
 ccrl prep phrasebank                              # DDXPlus paraphrase bank (~$1)
-bash scripts/run_detached.sh prep mcr --stage all --roles pilot,panel   # 436 real cases, extract + verify (~$15–30)
+bash scripts/run_detached.sh prep mcr --stage all --roles pilot,panel   # 436 real cases, extract + verify (~$30)
 ccrl prep finalize                                # deterministic; prints prepared counts
 ```
+
+If the job stops before it finishes (check with `ccrl status` or the end of
+the log), run the same `run_detached.sh prep mcr ...` command again. Finished
+extractions are skipped and it continues with what is left.
 
 `finalize` must report at least **10 ok pilot** and **300 ok panel**
 MedCaseReasoning cases (it prepares spares). If it reports fewer, send the
@@ -130,8 +142,8 @@ with the pilot; the panel does not wait for them.
 * `artifacts/frozen/banks/phrasebank_review.csv`
 * `artifacts/frozen/medcase/medcase_review.csv`
 
-The training-set extraction (2,150 cases, ≈$40–100) is needed only for the
-training part. Run it any time before 18 Dec, e.g. overnight:
+The training-set extraction (2,150 cases, ≈$140 at the measured
+$0.065 per case) is needed only for the training part. Run it any time before 18 Dec, e.g. overnight:
 
 ```bash
 bash scripts/run_detached.sh prep mcr --stage extract --roles train
@@ -186,6 +198,13 @@ ccrl billing reconcile --start 2026-11-07
 Or in the console: Billing → Cost Explorer, group by *Service* and by *Charge
 type*. Every model line should be matched by a **Credit** line. If anything
 is billed to the card, stop and tell the team.
+
+**If the AWS total matches the ledger's reported cost** (`ccrl status`,
+"reported" column), AWS is billing Flex calls at the Flex rate. Then set
+`guard_counts_flex: true` in `config/prices.yaml`; this needs no re-freeze.
+From then on the budget guard counts finished Flex calls at their real price
+instead of double. Without it, the caps fill about twice as fast as the money
+is actually spent.
 
 ---
 
@@ -261,6 +280,8 @@ git push
 | `Freeze check failed: changed: [...]` | an input changed after `ccrl freeze` | undo the edit; if it was intended, tell the team before re-freezing |
 | `config/models.yaml changed for [...] since they were probed` | the probe results are older than the model settings | run the printed `ccrl models probe --models ...` (a few cents) |
 | `hard cap $1000.00` / `job cap` in the summary | a cap was reached | `ccrl status`; tell the team; do not edit caps without agreement |
+| `committed` in the log is about 2× the AWS bill | the guard counts Flex calls at full price until `guard_counts_flex: true` (§6) | expected; nothing is overspent |
+| a detached job is no longer running, no error in the log | the Mac slept (lid closed) or the shell that started it ended | run the same command again from a normal Terminal window |
 | `model_halted` / `ValidationException` | Bedrock rejected a parameter for one model | other models continue; re-run `ccrl models probe --models <key>` and send the output |
 | `effort_arm: gpt-oss-120b has no working reasoning-effort control` | the probe found the effort setting ignored | nothing to do; tell the team (the arm is skipped) |
 | `AccessDeniedException`, `ExpiredToken` | credentials | refresh credentials (`aws sso login` / new keys), re-run the same command |

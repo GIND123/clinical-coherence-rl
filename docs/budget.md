@@ -61,7 +61,31 @@ After the pilot, `ccrl report pilot` re-forecasts every remaining job from
 the measured mean (expected) and p90 (high) output tokens per model. Expect
 the "high" column to be the realistic one for reasoning-heavy models.
 
+## Measured so far (7–8 Nov 2026)
+
+- **MedCaseReasoning extraction:** 436 pilot/panel cases with Kimi K3 cost
+  **$28.47** reported by the ledger, about **$0.065 per case**. AWS's credit
+  page showed $28.98 used.
+- **So:** the price table and the Flex discount match AWS's own estimate. The
+  2,150-case training extraction will cost about $140; its job cap is $350
+  in guard terms.
+- **Credits:** AWS draws the spend from the credit (estimated remaining
+  $1,071.02 of $1,100), not the card.
+
 ## Caps (enforced on every call)
+
+**Guard cost vs real cost.** Caps are checked against the conservative
+*guard* cost, never the reported cost. The guard takes full Standard price
+(no Flex discount) × 1.25 for unverified prices, so for Flex-served models it
+runs about 2.5× the real spend (e.g. $58 committed vs $28 spent after the
+extraction). Two settings in `config/prices.yaml` bring it down to the real
+figure; neither needs a re-freeze:
+
+- `verified: true` per confirmed row removes the 1.25;
+- `guard_counts_flex: true` removes the 2×, set once `ccrl billing reconcile`
+  confirms Flex billing.
+
+
 
 - **Hard cap:** $1,000 across everything.
 - **Job caps:** about 1.5 × the high scenario (`config/budget.yaml`).

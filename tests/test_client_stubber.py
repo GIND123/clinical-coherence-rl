@@ -80,3 +80,20 @@ def test_truncation_and_refusal():
     for stop, status in (("max_tokens", "truncated"), ("content_filtered", "refused")):
         resp = dict(OK_RESPONSE, stopReason=stop)
         assert C.process_response(resp, 1, "default").status == status
+
+
+def test_guard_counts_flex_only_when_enabled(monkeypatch):
+    """Finished Flex calls count at full price in the guard unless the PI has
+    confirmed Flex billing (guard_counts_flex: true)."""
+    from ccrl import config
+    from ccrl.bedrock import pricing
+    usage = {"inputTokens": 1000, "outputTokens": 500, "totalTokens": 1500}
+    rep, guard = pricing.cost(usage, "kimi-k3", "flex")
+    assert abs(guard - rep * 2 * 1.25) < 1e-12           # default: no discount in the guard
+    real = dict(config.prices())
+    monkeypatch.setattr(config, "prices", lambda: {**real, "guard_counts_flex": True})
+    rep2, guard2 = pricing.cost(usage, "kimi-k3", "flex")
+    assert abs(guard2 - rep2 * 1.25) < 1e-12
+    _, guard_std = pricing.cost(usage, "kimi-k3", "default")
+    assert abs(guard_std - guard) < 1e-12                 # Standard-tier calls unaffected
+    assert pricing.worst_case(1000, 500, "kimi-k3") >= guard_std  # reservations never discounted

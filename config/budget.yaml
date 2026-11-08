@@ -25,7 +25,7 @@ priority_c_gate_usd: 700.00
 job_caps_usd:
   probe: 5.00
   prep_phrasebank: 10.00
-  prep_mcr_extract: 200.00
+  prep_mcr_extract: 350.00       # measured 2026-11-07: ~$0.065/case real (Kimi K3), ~2x that in guard cost
   prep_mcr_verify: 25.00
   pilot: 15.00
   panel_main: 250.00

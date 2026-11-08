@@ -22,6 +22,14 @@
 unverified_safety_factor: 1.25
 flex_multiplier: 0.5
 
+# Budget guard and Flex. false (the default) = a finished call served on Flex
+# still counts at the full Standard price, so caps fill about twice as fast
+# as real spend. Set to true ONLY after `ccrl billing reconcile` (24-48 h
+# after a Flex job) shows AWS billing those calls at the Flex rate, i.e. the
+# ledger's reported cost matches Cost Explorer. In-flight reservations never
+# use the discount. Changing this does not invalidate the freeze.
+guard_counts_flex: false
+
 prices:
   # ---- panel (open-weight, served by Bedrock) ----
   kimi-k3:        {input: 3.30,  output: 16.50, cache_read: 3.30,  cache_write: 3.30,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}

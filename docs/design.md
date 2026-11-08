@@ -132,7 +132,9 @@ non-inferiority (Track B): `src/ccrl/analysis/stats.py`.
 ## 5. Spending controls
 
 Ledger (`runs/ledger.sqlite`): every attempt with request, response, usage,
-reported cost and conservative "guard" cost. A call is sent only if
+reported cost and conservative "guard" cost. The guard counts finished Flex
+calls at the Standard price until Cost Explorer confirms Flex billing
+(`guard_counts_flex` in `config/prices.yaml`). A call is sent only if
 committed spend + its worst-case reservation (input estimate at full price +
 max tokens × output price, ×1.25 for unverified prices, no Flex discount)
 stays under the hard cap ($1,000), the job cap and the per-model cap. Attempts
