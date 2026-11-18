@@ -28,6 +28,8 @@ def plan_tasks(job_name: str, ws: Workspace, specs: dict, models_filter: list[st
     systems = I.load_systems(ws)
     wanted = set(job_transforms(job))
     item_ids = [i for i in sets[job["item_set"]] if items[i]["transform"] in wanted]
+    if job.get("datasets"):
+        item_ids = [i for i in item_ids if items[i]["dataset"] in set(job["datasets"])]
     if limit_cases:
         keep: list[str] = []
         for i in item_ids:
@@ -59,17 +61,23 @@ def plan_tasks(job_name: str, ws: Workspace, specs: dict, models_filter: list[st
             raise SystemExit(f"{job_name}: {mk} has no working reasoning-effort control in the lock "
                              "(the probe found it ignored or rejected), so its effort levels would be "
                              "identical requests. Not run.")
+        temperature = job.get("temperature")          # None = provider default, nothing sent
+        # Replicates are independent identical requests (distinct request IDs,
+        # replicate index 1..K), used to estimate each case's answer distribution.
+        reps = range(1, int(job["replicates"]) + 1) if job.get("replicates") else [0]
         for effort in job.get("efforts", ["default"]):
-            for iid in item_ids:
-                it = items[iid]
-                system = systems[it["system"]]
-                cands = I.candidates_of(it)
-                rid = task_id(job_name, iid, mk, spec.model_id, effort, 0, system, it["turns"])
-                tasks.append(Task(
-                    request_id=rid, job=job_name, priority=job["priority"], model_key=mk, item_id=iid,
-                    case_id=it["case_id"], transform=it["transform"], dataset=it["dataset"], effort=effort,
-                    system=system, turns=it["turns"], kind=it["kind"], codes=[c for c, _ in cands],
-                    names=dict(cands), order_key=(case_order[it["case_id"]],)))
+            for rep in reps:
+                for iid in item_ids:
+                    it = items[iid]
+                    system = systems[it["system"]]
+                    cands = I.candidates_of(it)
+                    rid = task_id(job_name, iid, mk, spec.model_id, effort, rep, system, it["turns"], temperature)
+                    tasks.append(Task(
+                        request_id=rid, job=job_name, priority=job["priority"], model_key=mk, item_id=iid,
+                        case_id=it["case_id"], transform=it["transform"], dataset=it["dataset"], effort=effort,
+                        system=system, turns=it["turns"], kind=it["kind"], codes=[c for c, _ in cands],
+                        names=dict(cands), replicate=rep, order_key=(case_order[it["case_id"]], rep),
+                        temperature=None if temperature is None else float(temperature)))
     return tasks
 
 
@@ -117,6 +125,7 @@ def run_job(job_name: str, ws: Workspace, models_filter: list[str] | None = None
     ledger = Ledger(ws.ledger)
     try:
         check_preconditions(job_name, ws, ledger, force_order, allow_c)
+        check_disk(ws)
         specs = M.load_lock(ws.dry_run)
         tasks = plan_tasks(job_name, ws, specs, models_filter, limit_cases)
         if not tasks:
@@ -125,11 +134,42 @@ def run_job(job_name: str, ws: Workspace, models_filter: list[str] | None = None
         factory = M.make_client_factory(ws.dry_run, profile)
         clients = {mk: factory(specs[mk]) for mk in {t.model_key for t in tasks}}
         summary = run_tasks(tasks, ledger, clients, specs, ws, guard, label=job_name)
-        stamp = local_now().strftime("%Y%m%d-%H%M%S")
-        ledger.backup(ws.runs / "backups" / f"ledger-{job_name}-{stamp}.sqlite")
+        if summary.get("ran"):
+            backup_ledger(ws, ledger, job_name)
         return summary
     finally:
         ledger.close()
+
+
+def check_disk(ws: Workspace) -> None:
+    """Refuse to start a paid job with too little free disk. The 2026-11-17
+    panel run filled the disk (ledger backups of ~0.5 GB each) and crashed."""
+    import shutil
+    need = float(config.budget().get("min_free_disk_gb", 5))
+    ws.runs.mkdir(parents=True, exist_ok=True)
+    free = shutil.disk_usage(ws.runs).free / 1e9
+    if free < need:
+        raise SystemExit(f"Only {free:.1f} GB free on the disk holding {ws.runs} (need {need:.0f} GB). "
+                         "Free space first, e.g. delete old files in runs/backups/ (keep the newest), "
+                         "runs/dryrun/ and runs/archive/*.tar.gz that are already copied elsewhere.")
+
+
+def backup_ledger(ws: Workspace, ledger: Ledger, job_name: str) -> None:
+    """Back up the ledger after a job; keep only the newest `keep_backups`."""
+    keep = int(config.budget().get("keep_backups", 3))
+    d = ws.runs / "backups"
+    stamp = local_now().strftime("%Y%m%d-%H%M%S")
+    try:
+        ledger.backup(d / f"ledger-{job_name}-{stamp}.sqlite")
+    except OSError as e:
+        print(f"[{job_name}] WARNING: ledger backup failed ({e}); the ledger itself is intact.", flush=True)
+        return
+    old = sorted(d.glob("ledger-*.sqlite"), key=lambda p: p.stat().st_mtime, reverse=True)[keep:]
+    for p in old:
+        try:
+            p.unlink()
+        except OSError:
+            pass
 
 
 def model_caps(job_name: str, tasks: list[Task], ws: Workspace) -> dict[str, float]:

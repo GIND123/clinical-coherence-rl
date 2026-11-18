@@ -207,6 +207,12 @@ def validate_all() -> list[str]:
                     if mk in ms and ms[mk].effort_strategy == "none":
                         problems.append(f"jobs.{name}: effort {e!r} requested for {mk}, "
                                         "which has effort.strategy none")
+        if "replicates" in j and (not isinstance(j["replicates"], int) or j["replicates"] < 1):
+            problems.append(f"jobs.{name}: replicates must be a positive integer")
+        if "datasets" in j and not set(j["datasets"]) <= {"ddxplus", "medcase"}:
+            problems.append(f"jobs.{name}: datasets must be a subset of [ddxplus, medcase]")
+        if "temperature" in j and not (isinstance(j["temperature"], (int, float)) and 0 <= j["temperature"] <= 2):
+            problems.append(f"jobs.{name}: temperature must be a number in [0, 2]")
         if j.get("priority") not in ("A", "B", "C"):
             problems.append(f"jobs.{name}: priority must be A, B or C")
         if j.get("priority") in ("A", "B") and any(mk in opt for mk in job_models(name)):

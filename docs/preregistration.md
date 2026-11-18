@@ -4,6 +4,9 @@
 `ccrl freeze` and **before** `ccrl run panel_main`. Paste the freeze hash:
 `shasum -a 256 artifacts/frozen/FREEZE.json` →* `__________`
 
+> **Amendment 1 (drafted 18 Nov 2026; to be filed after the main panel and before any secondary
+> arm or training run):** [osf_amendment_1.md](osf_amendment_1.md).
+
 ## 1. Title
 Coherence as a Reward: Label-Free Reinforcement Learning for Rational Belief
 Revision in Open-Weight Clinical Reasoning Models.

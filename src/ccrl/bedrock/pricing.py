@@ -64,6 +64,16 @@ def usage_tokens(usage: dict) -> dict:
             "input_reported": inp, "semantics": semantics}
 
 
+def flex_confirmed() -> bool:
+    """True when AWS has been shown to bill Flex calls at the Flex rate:
+    `ccrl billing confirm-flex` wrote runs/flex_confirmed.json (the evidence),
+    or prices.yaml sets guard_counts_flex: true."""
+    if bool(config.prices().get("guard_counts_flex", False)):
+        return True
+    from ccrl import paths
+    return (paths.RUNS / "flex_confirmed.json").exists()
+
+
 def cost(usage: dict, price_key: str, served_tier: str | None) -> tuple[float, float]:
     """(reported_cost, guard_cost) in USD for one response."""
     p = price_for(price_key)
@@ -72,7 +82,7 @@ def cost(usage: dict, price_key: str, served_tier: str | None) -> tuple[float, f
             + u["cache_write"] * p.cache_write + u["output"] * p.output) / M
     flex = (served_tier or "").lower() == "flex"
     mult = float(config.prices().get("flex_multiplier", 0.5)) if flex else 1.0
-    guard_mult = mult if (flex and bool(config.prices().get("guard_counts_flex", False))) else 1.0
+    guard_mult = mult if (flex and flex_confirmed()) else 1.0
     return base * mult, base * guard_mult * p.guard_factor
 
 

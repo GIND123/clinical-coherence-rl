@@ -23,7 +23,8 @@ from ccrl.panel import items as I
 from ccrl.util import local_now, now_iso, sha256_file, write_json
 from ccrl.workspace import Workspace
 
-PANEL_JOBS = ("pilot", "panel_main", "panel_ext", "effort_arm", "sequential", "distill", "partner_panel")
+PANEL_JOBS = ("pilot", "panel_main", "panel_ext", "effort_arm", "sequential", "distill", "partner_panel",
+              "temp0", "resample")
 
 
 def _df(ledger: Ledger, sql: str) -> pd.DataFrame:
@@ -37,7 +38,7 @@ def posterior_table(ws: Workspace, ledger: Ledger | None = None) -> pd.DataFrame
     ledger = ledger or Ledger(ws.ledger)
     try:
         df = _df(ledger, "SELECT r.request_id, r.job, r.model_key, r.model_id, r.item_id, r.case_id, r.transform, "
-                         "r.dataset, r.effort, r.status AS request_status, r.n_attempts, a.attempt, a.turn, "
+                         "r.dataset, r.effort, r.replicate, r.status AS request_status, r.n_attempts, a.attempt, a.turn, "
                          "a.status AS attempt_status, a.stop_reason, a.served_tier, a.input_tokens, a.output_tokens, "
                          "a.cache_read, a.cost_reported, a.latency_ms, a.parsed_json FROM requests r JOIN attempts a "
                          "ON a.request_id=r.request_id AND a.attempt=r.final_attempt "

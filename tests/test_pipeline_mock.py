@@ -75,3 +75,17 @@ def test_effort_arm_refuses_without_effort_control(ws_ready):
     specs["gpt-oss-120b"] = dataclasses.replace(specs["gpt-oss-120b"], effort_strategy="none")
     with pytest.raises(SystemExit, match="no working reasoning-effort control"):
         jobs.plan_tasks("effort_arm", ws_ready, specs, limit_cases=1)
+
+
+def test_resample_and_temp0_plans(ws_ready):
+    """resample: DDXPlus only, base + ablate, replicates 1..3 with distinct IDs;
+    temp0: temperature 0 on every task; neither collides with panel_main."""
+    specs = M.load_lock(True)
+    rs = jobs.plan_tasks("resample", ws_ready, specs, limit_cases=2)
+    assert {t.dataset for t in rs} == {"ddxplus"} and {t.transform for t in rs} == {"base", "ablate"}
+    assert {t.replicate for t in rs} == {1, 2, 3} and len({t.request_id for t in rs}) == len(rs)
+    assert all(t.temperature is None for t in rs)
+    t0 = jobs.plan_tasks("temp0", ws_ready, specs, limit_cases=2)
+    assert t0 and all(t.temperature == 0.0 for t in t0)
+    panel = {t.request_id for t in jobs.plan_tasks("panel_main", ws_ready, specs, limit_cases=2)}
+    assert panel.isdisjoint({t.request_id for t in rs}) and panel.isdisjoint({t.request_id for t in t0})

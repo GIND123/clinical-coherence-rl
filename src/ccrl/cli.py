@@ -129,6 +129,30 @@ def cmd_run(a) -> int:
     return 0 if not s.get("fatal_run") else 2
 
 
+def cmd_queue(a) -> int:
+    """Run several jobs one after another in ONE process (one ledger writer).
+    Stops at the first job that ends with a budget stop or a fatal error."""
+    from ccrl.panel import jobs
+    ws = get_ws(a.dry_run)
+    for name in a.jobs:
+        print(f"\n===== queue: {name} =====", flush=True)
+        try:
+            s = jobs.run_job(name, ws, _csv(a.models), a.limit_cases, None, a.force_order, False, a.profile)
+        except SystemExit as e:
+            msg = str(e)
+            if "nothing to run" in msg or "already final" in msg:
+                print(f"[queue] {name}: nothing left to run", flush=True)
+                continue
+            print(f"[queue] {name} not run: {msg}\n[queue] stopping.", flush=True)
+            return 1
+        if s.get("budget_stop") or s.get("fatal_run"):
+            print(f"[queue] {name} stopped early ({s.get('budget_stop') or s.get('fatal_run')}); stopping the queue.",
+                  flush=True)
+            return 2
+    print("\n[queue] all jobs finished.", flush=True)
+    return 0
+
+
 def cmd_status(a) -> int:
     from ccrl.panel import qa
     print(qa.status(get_ws(a.dry_run)))
@@ -157,6 +181,14 @@ def cmd_archive(a) -> int:
 
 def cmd_billing(a) -> int:
     from ccrl import billing
+    if a.action == "reprice-flex":
+        return billing.reprice_flex(get_ws(a.dry_run), apply=a.apply)
+    if a.action == "confirm-flex":
+        if not a.start:
+            raise SystemExit("billing confirm-flex needs --start YYYY-MM-DD (first day of paid runs)")
+        return billing.confirm_flex(get_ws(a.dry_run), a.start, a.profile)
+    if not a.start:
+        raise SystemExit("billing reconcile needs --start YYYY-MM-DD")
     return billing.reconcile(get_ws(a.dry_run), a.start, a.end, a.profile)
 
 
@@ -205,6 +237,11 @@ def cmd_rehearse(a) -> int:
     step("run panel_main (limited)", lambda: jobs.run_job("panel_main", ws, limit_cases=n, force_order=True))
     step("run effort_arm (limited)", lambda: jobs.run_job("effort_arm", ws, limit_cases=max(2, n // 4), force_order=True))
     step("run sequential (limited)", lambda: jobs.run_job("sequential", ws, limit_cases=max(2, n // 4), force_order=True))
+    step("run temp0 (limited)", lambda: jobs.run_job("temp0", ws, limit_cases=max(2, n // 4), force_order=True))
+    step("run resample (limited)", lambda: jobs.run_job("resample", ws, limit_cases=max(2, n // 4), force_order=True))
+    step("queue rerun (must be a no-op)", lambda: cmd_queue(argparse.Namespace(
+        dry_run=True, jobs=["temp0", "resample"], models=None, limit_cases=max(2, n // 4), force_order=True,
+        profile=None)))
     step("rerun panel_main (must be a no-op)", lambda: jobs.run_job("panel_main", ws, limit_cases=n, force_order=True))
     step("status", lambda: print(qa.status(ws)))
     step("analyze", lambda: report.run(ws))
@@ -263,6 +300,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--override-c-gate", action="store_true", help="PI-approved override of the priority-C gate")
     s.set_defaults(fn=cmd_run)
 
+    s = sub.add_parser("queue", help="run several jobs one after another (one process)")
+    s.add_argument("jobs", nargs="+")
+    s.add_argument("--models", help="restrict to these registry keys")
+    s.add_argument("--limit-cases", type=int, default=None, help="only the first N cases (testing)")
+    s.add_argument("--force-order", action="store_true", help="ignore requires_completed")
+    s.set_defaults(fn=cmd_queue)
+
     for name, fn, h in (("status", cmd_status, "spend and progress"), ("export", cmd_export, "ledger -> parquet"),
                         ("plan", cmd_plan, "forecast")):
         if name == "plan":
@@ -279,9 +323,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_archive)
 
     s = sub.add_parser("billing", help="reconcile with AWS Cost Explorer")
-    s.add_argument("action", choices=["reconcile"])
-    s.add_argument("--start", required=True)
+    s.add_argument("action", choices=["reconcile", "confirm-flex", "reprice-flex"])
+    s.add_argument("--start", default=None)
     s.add_argument("--end", default=None)
+    s.add_argument("--apply", action="store_true", help="reprice-flex: write the change")
     s.set_defaults(fn=cmd_billing)
 
     s = sub.add_parser("analyze", help="offline estimands, tables and figures")

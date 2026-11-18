@@ -109,6 +109,30 @@ uniform mixture over patients, `M·log B = I(patient; output) ≤ H(output) ≤ 
 equals the noise floor and the excess is 0. (d) The leave-one-out floor and
 the movement have the same expectation under pure noise. ∎
 
+**Proposition 5 (what removing answer variance is worth; added 18 Nov 2026
+after the main panel).** Let a stochastic policy's stated posterior for
+input `x` be a random vector `q` with mean `q̄(x) = E[q | x]`, and let
+`B(q, y) = ‖q − e_y‖²` be the Brier score. Then
+
+`E[B(q, y) | x] = B(q̄(x), y) + E[‖q − q̄(x)‖² | x]`.
+
+So a single answer is worse than the model's own mean belief by exactly its
+variance, for every outcome `y`. A training signal that drives the variance
+term to 0 while leaving `q̄` unchanged improves the expected Brier score by
+that amount, without labels. The invariance term of `R_coh` penalises
+`JS(q_x, q_x')` between rollouts. Rollouts on the same input (or on
+meaning-preserving variants of it) differ only through this variance, so the
+term pushes it down. Proposition 2 still applies: nothing in the coherence
+signal moves `q̄` toward the truth. That is the job of fidelity or accuracy.
+
+*Proof.* Expand `‖q − e_y‖² = ‖(q − q̄) + (q̄ − e_y)‖²`. The cross term has
+conditional expectation 0. ∎
+
+*Empirically* (docs/results_panel_main.md), the variance term is 4–24% of
+the single-answer Brier score across the six panel models. Averaging eight
+equivalent answers raises top-1 by up to 12.8 points. Paper 2's H7 tests
+whether coherence training captures this gain in a single answer.
+
 ## 3. Findings from the synthetic suite, and the two corrections
 
 The suite (`python -m ccrl.reward.synthetic`, 1,024 DDXPlus training

@@ -58,6 +58,21 @@ def freeze(ws: Workspace) -> dict:
         raise SystemExit("No built items to freeze: run `ccrl build items` first.")
     doc = {"created_at": now_iso(), "git_commit": git_commit(), "dry_run": ws.dry_run,
            "files": {k: sha256_file(p) for k, p in sorted(files.items())}}
+    if ws.freeze_file.exists():
+        # A re-freeze (an OSF amendment) must not erase the record the earlier
+        # jobs ran under: keep every previous freeze, named by its own date.
+        prev = read_json(ws.freeze_file)
+        if prev.get("files") == doc["files"]:
+            return prev                      # nothing changed: keep the registered file byte-identical
+        else:
+            hist = ws.freeze_file.parent / "freeze_history"
+            hist.mkdir(parents=True, exist_ok=True)
+            stamp = str(prev.get("created_at", "unknown")).replace(":", "").replace("-", "")[:15]
+            dest = hist / f"FREEZE-{stamp}.json"
+            if not dest.exists():
+                dest.write_bytes(ws.freeze_file.read_bytes())
+            doc["previous"] = {"created_at": prev.get("created_at"), "sha256": sha256_file(dest),
+                               "file": f"freeze_history/{dest.name}"}
     write_json(ws.freeze_file, doc)
     return doc
 

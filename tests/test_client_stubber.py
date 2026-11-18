@@ -50,7 +50,7 @@ def test_pricing_cache_semantics_and_flex():
     rep, guard = pricing.cost(OK_RESPONSE["usage"], "kimi-k3", "flex")
     p = pricing.price_for("kimi-k3")
     full = (100 * p.input + 1000 * p.cache_read + 50 * p.output) / 1e6
-    assert abs(rep - full * 0.5) < 1e-12 and abs(guard - full * 1.25) < 1e-12
+    assert abs(rep - full * 0.5) < 1e-12 and abs(guard - full * p.guard_factor) < 1e-12
     incl = pricing.usage_tokens({"inputTokens": 1100, "outputTokens": 50, "totalTokens": 1150,
                                  "cacheReadInputTokens": 1000})
     assert incl["semantics"] == "inclusive" and incl["uncached_input"] == 100
@@ -88,12 +88,29 @@ def test_guard_counts_flex_only_when_enabled(monkeypatch):
     from ccrl import config
     from ccrl.bedrock import pricing
     usage = {"inputTokens": 1000, "outputTokens": 500, "totalTokens": 1500}
+    gf = pricing.price_for("kimi-k3").guard_factor
+    monkeypatch.setattr(pricing, "flex_confirmed", lambda: False)
     rep, guard = pricing.cost(usage, "kimi-k3", "flex")
-    assert abs(guard - rep * 2 * 1.25) < 1e-12           # default: no discount in the guard
+    assert abs(guard - rep * 2 * gf) < 1e-12             # default: no discount in the guard
     real = dict(config.prices())
-    monkeypatch.setattr(config, "prices", lambda: {**real, "guard_counts_flex": True})
+    monkeypatch.setattr(pricing, "flex_confirmed", lambda: True)
     rep2, guard2 = pricing.cost(usage, "kimi-k3", "flex")
-    assert abs(guard2 - rep2 * 1.25) < 1e-12
+    assert abs(guard2 - rep2 * gf) < 1e-12
     _, guard_std = pricing.cost(usage, "kimi-k3", "default")
     assert abs(guard_std - guard) < 1e-12                 # Standard-tier calls unaffected
     assert pricing.worst_case(1000, 500, "kimi-k3") >= guard_std  # reservations never discounted
+
+
+def test_temperature_request_validates():
+    """The decoding-robustness arm (temp0) sends inferenceConfig.temperature;
+    it must be a valid Converse parameter for the installed botocore."""
+    spec = C.CallSpec("gpt-oss-120b", "openai.gpt-oss-120b-1:0", "gpt-oss-120b", effort_strategy="reasoning_field",
+                      default_effort="medium", service_tier="flex")
+    req = C.build_request(spec, "system text", [{"role": "user", "text": "u1"}], temperature=0.0)
+    assert req["inferenceConfig"]["temperature"] == 0.0
+    c, st = _client()
+    st.add_response("converse", OK_RESPONSE, expected_params=req)
+    with st:
+        res = c.converse(req, spec.service_tier)
+    assert res.status == "ok"
+    assert "temperature" not in C.build_request(spec, "s", [{"role": "user", "text": "u"}])["inferenceConfig"]

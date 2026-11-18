@@ -21,6 +21,8 @@ def test_every_module_compiles():
     ["analyze"], ["rehearse"], ["train", "run", "--config", "config/train/ccr_acc_fid.yaml"],
     ["train", "reward-suite"], ["--dry-run", "status"], ["run", "partner_panel"],
     ["train", "compare", "--ref", "a.parquet", "--new", "b.parquet", "--ref-model", "qwen3-32b"],
+    ["queue", "effort_arm", "temp0", "resample"], ["billing", "confirm-flex", "--start", "2026-11-06"],
+    ["billing", "reprice-flex", "--apply"],
 ])
 def test_parser_accepts(argv):
     args = cli.build_parser().parse_args(argv)

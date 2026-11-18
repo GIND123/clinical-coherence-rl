@@ -195,6 +195,10 @@ def analyze(post: pd.DataFrame, items: dict, case_index: dict, n_boot: int = 200
             seed: int = 0) -> dict[str, pd.DataFrame]:
     est, per_case = [], []
     single = post[(post["turn"] == 1) & (~post["transform"].isin(["seqA", "seqB"]))]
+    if "replicate" in single:
+        # replicate arms (several identical requests per item) are analysed by
+        # ccrl.analysis.stability.updating, not by the one-answer-per-item estimands
+        single = single[single["replicate"].fillna(0) == 0]
     for (job, mk, eff, ds), g in single.groupby(["job", "model_key", "effort", "dataset"]):
         if job == "distill":
             continue

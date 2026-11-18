@@ -59,6 +59,7 @@ class Task:
     validator: Callable[[str], tuple[bool, bool, str | None]] | None = None
     replicate: int = 0
     order_key: tuple = field(default_factory=tuple)
+    temperature: float | None = None              # None = provider default (never sent)
 
     def validate(self, text: str) -> tuple[bool, bool, str | None]:
         """(parse_ok, informative, parsed_json)."""
@@ -69,9 +70,13 @@ class Task:
 
 
 def task_id(job: str, item_id: str, model_key: str, model_id: str, effort: str, replicate: int,
-            system: str, turns: list[str]) -> str:
+            system: str, turns: list[str], temperature: float | None = None) -> str:
+    # temperature=None keeps the ID scheme of every request already in a ledger.
+    if temperature is None:
+        return stable_hash(job, item_id, model_key, model_id, effort, replicate,
+                           stable_hash(system, *turns, n=64), n=24)
     return stable_hash(job, item_id, model_key, model_id, effort, replicate,
-                       stable_hash(system, *turns, n=64), n=24)
+                       stable_hash(system, *turns, n=64), {"temperature": float(temperature)}, n=24)
 
 
 # ------------------------------------------------------------------ budget
@@ -132,7 +137,8 @@ class Executor:
     def call(self, task: Task, attempt: int, turn: int, messages: list[dict],
              max_tokens: int | None = None) -> CallResult | None:
         spec = self.specs[task.model_key]
-        req = build_request(spec, task.system, messages, task.effort, max_tokens=max_tokens)
+        req = build_request(spec, task.system, messages, task.effort, max_tokens=max_tokens,
+                            temperature=task.temperature)
         res_cost = reservation_for(req, spec.price_key)
         with self.guard.lock:
             ok, why = self.guard.check(task.model_key, res_cost)
@@ -152,11 +158,19 @@ class Executor:
             error_code=res.error_code, error_msg=res.error_msg,
             response_json=json.dumps(res.response, ensure_ascii=False) if res.response else None,
             text=res.text, reasoning=res.reasoning)
-        append_jsonl(self.ws.raw / task.job / f"{task.model_key}.jsonl", {
-            "ts": now_iso(), "request_id": task.request_id, "attempt": attempt, "turn": turn,
-            "item_id": task.item_id, "model_key": task.model_key, "model_id": spec.model_id,
-            "effort": task.effort, "status": res.status, "cost_reported": rep, "request": req,
-            "response": res.response, "error_code": res.error_code, "error_msg": res.error_msg})
+        try:
+            append_jsonl(self.ws.raw / task.job / f"{task.model_key}.jsonl", {
+                "ts": now_iso(), "request_id": task.request_id, "attempt": attempt, "turn": turn,
+                "item_id": task.item_id, "model_key": task.model_key, "model_id": spec.model_id,
+                "effort": task.effort, "status": res.status, "cost_reported": rep, "request": req,
+                "response": res.response, "error_code": res.error_code, "error_msg": res.error_msg})
+        except OSError as e:
+            # The raw files are a convenience mirror; the ledger (written above)
+            # is the record. A full disk must not abort a paid run.
+            if not getattr(self, "_mirror_warned", False):
+                print(f"[{task.job}] WARNING: raw mirror not written ({e}); the ledger is complete. "
+                      "Free disk space soon.", flush=True)
+                self._mirror_warned = True
         return res
 
     def run_task(self, task: Task, stop: threading.Event, fatal_models: set, fatal_run: list) -> str:

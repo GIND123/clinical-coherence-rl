@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ccrl.analysis.estimands import analyze
+from ccrl.analysis.stability import reliability, updating
 from ccrl.archive.export import posterior_table
 from ccrl.panel import items as I
 from ccrl.util import now_iso, read_jsonl
@@ -45,6 +46,24 @@ def run(ws: Workspace, jobs: list[str] | None = None, n_boot: int = 2000) -> Pat
     if not res["sequential"].empty:
         lines += ["", "## Sequential evidence", "",
                   res["sequential"].round(4).to_string(index=False)]
+    rel, rel_pc = reliability(post, n_boot=n_boot)
+    if not rel.empty:
+        rel.to_csv(out / "stability.csv", index=False)
+        rel_pc.to_parquet(out / "stability_per_case.parquet", index=False)
+        rc = [c for c in ("job", "model_key", "effort", "dataset", "n_cases", "retest_flip", "floor",
+                          "single_top1", "ens_top1", "ens_gain_top1", "variance_share", "auroc_conf",
+                          "auroc_disagree") if c in rel.columns]
+        lines += ["", "## Stability (run-to-run noise)", "",
+                  "retest_flip: share of cases whose top diagnosis changes between two identical requests. "
+                  "ens_top1: accuracy of the mean of all meaning-preserving answers. variance_share: share of "
+                  "the single-answer Brier score that is pure answer-to-answer variance. auroc_*: detection of "
+                  "a wrong base answer by 1 - stated confidence, or by disagreement of the other answers.", "",
+                  rel[rc].round(4).to_string(index=False)]
+    upd = updating(post, items)
+    if not upd.empty:
+        upd.to_csv(out / "updating.csv", index=False)
+        lines += ["", "## Evidence updating on mean posteriors (resample arm)", "",
+                  upd.round(4).to_string(index=False)]
     (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     _figures(E, out)
     return out

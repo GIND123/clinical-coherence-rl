@@ -120,14 +120,31 @@ def compare(ref: str, new: str, margin_top1: float = 0.02, ws: Workspace | None 
             ref_model: str | None = None, new_model: str | None = None) -> pd.DataFrame:
     """Paired, case-level comparison of two evaluated models (H2/H3; H6 with a
     panel model as `ref`)."""
+    from ccrl.analysis.stability import reliability_per_case
     a, b = estimands_for(ref, ws, ref_model), estimands_for(new, ws, new_model)
     pa, pb = a["per_case"], b["per_case"]
+
+    def with_stability(pc: pd.DataFrame, parquet: str, model: str | None) -> pd.DataFrame:
+        # Amendment 1 endpoints: retest flip and the single-vs-ensemble gap (H6, H7)
+        post = load_posteriors(parquet, model)
+        post = post[post["parse_ok"].astype(bool) & post["probs"].notna()] if "probs" in post else post.iloc[0:0]
+        st = [reliability_per_case(g).assign(dataset=ds) for ds, g in post.groupby("dataset")] if len(post) else []
+        if not st:
+            return pc
+        st = pd.concat(st, ignore_index=True)
+        st["ens_gap_top1"] = st["ens_top1"] - st["single_top1"] if "ens_top1" in st else np.nan
+        keep = [c for c in ("case_id", "dataset", "retest_flip", "ens_gap_top1") if c in st]
+        return pc.merge(st[keep], on=["case_id", "dataset"], how="left")
+
+    pa, pb = with_stability(pa, ref, ref_model), with_stability(pb, new, new_model)
     out = []
     for ds in sorted(set(pa["dataset"]) & set(pb["dataset"])):
         A = pa[pa["dataset"] == ds].set_index("case_id")
         Bv = pb[pb["dataset"] == ds].set_index("case_id")
-        for col, kind in (("js_order", "lower_better"), ("js_para", "lower_better"), ("js_cue", "lower_better"),
-                          ("sensitive", "higher_better"), ("top1", "noninferiority"), ("brier", "lower_better")):
+        for col, kind in (("js_order", "lower_better"), ("js_dup", "lower_better"), ("js_para", "lower_better"),
+                          ("js_cue", "lower_better"), ("floor", "lower_better"), ("retest_flip", "lower_better"),
+                          ("ens_gap_top1", "lower_better"), ("sensitive", "higher_better"),
+                          ("top1", "noninferiority"), ("brier", "lower_better")):
             if col not in A or col not in Bv:
                 continue
             if kind == "noninferiority":

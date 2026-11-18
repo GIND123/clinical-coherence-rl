@@ -22,22 +22,24 @@
 unverified_safety_factor: 1.25
 flex_multiplier: 0.5
 
-# Budget guard and Flex. false (the default) = a finished call served on Flex
-# still counts at the full Standard price, so caps fill about twice as fast
-# as real spend. Set to true ONLY after `ccrl billing reconcile` (24-48 h
-# after a Flex job) shows AWS billing those calls at the Flex rate, i.e. the
-# ledger's reported cost matches Cost Explorer. In-flight reservations never
-# use the discount. Changing this does not invalidate the freeze.
+# Budget guard and Flex. Until Flex billing is confirmed, a finished call
+# served on Flex still counts at the full Standard price, so caps fill about
+# twice as fast as real spend. Confirm it with
+#     ccrl billing confirm-flex --start 2026-11-07
+# which compares Cost Explorer with the ledger on complete days, records the
+# evidence in runs/flex_confirmed.json and re-counts past Flex calls.
+# (guard_counts_flex: true does the same without the check; avoid.)
+# In-flight reservations never use the discount.
 guard_counts_flex: false
 
 prices:
   # ---- panel (open-weight, served by Bedrock) ----
-  kimi-k3:        {input: 3.30,  output: 16.50, cache_read: 3.30,  cache_write: 3.30,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
-  glm-5:          {input: 1.00,  output: 3.20,  cache_read: 1.00,  cache_write: 1.00,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
-  deepseek-v3.2:  {input: 0.62,  output: 1.85,  cache_read: 0.62,  cache_write: 0.62,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
-  qwen3-next-80b: {input: 0.14,  output: 1.20,  cache_read: 0.14,  cache_write: 0.14,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
-  gpt-oss-120b:   {input: 0.15,  output: 0.60,  cache_read: 0.15,  cache_write: 0.15,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
-  qwen3-32b:      {input: 0.15,  output: 0.60,  cache_read: 0.15,  cache_write: 0.15,  verified: false, source: "AWS Price List, us-east-1 Standard, via AWS console assistant (PI, 2026-11-05); confirm on pricing page", checked: null}
+  kimi-k3:        {input: 3.30,  output: 16.50, cache_read: 3.30,  cache_write: 3.30,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
+  glm-5:          {input: 1.00,  output: 3.20,  cache_read: 1.00,  cache_write: 1.00,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
+  deepseek-v3.2:  {input: 0.62,  output: 1.85,  cache_read: 0.62,  cache_write: 0.62,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
+  qwen3-next-80b: {input: 0.14,  output: 1.20,  cache_read: 0.14,  cache_write: 0.14,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
+  gpt-oss-120b:   {input: 0.15,  output: 0.60,  cache_read: 0.15,  cache_write: 0.15,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
+  qwen3-32b:      {input: 0.15,  output: 0.60,  cache_read: 0.15,  cache_write: 0.15,  verified: true,  source: "AWS Price List, us-east-1 Standard (PI, 2026-11-05); PI-verified (guard factor 1.0 in the 2026-11-17 run); ledger matched AWS within 1% on 2026-11-07", checked: 2026-11-17}
   # ---- optional partner models (not available on the PI's account, 2026-11-06) ----
   opus-5.5:       {input: 4.00,  output: 20.00, cache_read: 0.20,  cache_write: 5.00,  verified: false, source: "Anthropic list price; not yet in the AWS Price List API (2026-11-05)", checked: null}
   sonnet-5.5:     {input: 2.00,  output: 10.00, cache_read: 0.20,  cache_write: 2.50,  verified: false, source: "Anthropic list price; not yet in the AWS Price List API (2026-11-05)", checked: null}

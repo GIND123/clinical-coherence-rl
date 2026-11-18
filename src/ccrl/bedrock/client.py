@@ -83,8 +83,11 @@ class CallResult:
 
 
 def build_request(spec: CallSpec, system: str, messages: list[dict], effort_label: str = "default",
-                  max_tokens: int | None = None) -> dict:
-    """Converse kwargs. messages: [{'role': 'user'|'assistant', 'text': str}, ...]."""
+                  max_tokens: int | None = None, temperature: float | None = None) -> dict:
+    """Converse kwargs. messages: [{'role': 'user'|'assistant', 'text': str}, ...].
+
+    temperature is sent only when a job asks for it (the decoding-robustness
+    arm); every other request runs at the provider default and sends none."""
     effort = spec.resolve_effort(effort_label)
     req: dict[str, Any] = {
         "modelId": spec.model_id,
@@ -92,6 +95,8 @@ def build_request(spec: CallSpec, system: str, messages: list[dict], effort_labe
         "messages": [{"role": m["role"], "content": [{"text": m["text"]}]} for m in messages],
         "inferenceConfig": {"maxTokens": int(max_tokens or spec.max_tokens_for(effort))},
     }
+    if temperature is not None:
+        req["inferenceConfig"]["temperature"] = float(temperature)
     amrf: dict[str, Any] = {}
     if effort:
         if spec.effort_strategy == "output_config":

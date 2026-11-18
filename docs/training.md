@@ -38,6 +38,33 @@ command). Logs: `runs/train/<name>_s<seed>/train_log.jsonl` with reward
 terms, M, the sensitivity gate, invalid fraction, entropy, KL; a run stops
 early if M falls > 30 % below its first-5-step mean (collapse safeguard).
 
+## Endpoints after amendment 1
+
+The main panel showed that run-to-run noise dominates (docs/results_panel_main.md).
+The training endpoints were amended before any training run
+(docs/osf_amendment_1.md):
+
+- **primary:** *total* incoherence, the raw JS between meaning-preserving
+  answers (`js_order`, `js_dup`, `js_para`, `js_cue`). The retest JS and the
+  retest flip rate are reported with it;
+- **H7:** the ensemble gap, single-answer top-1 minus 8-answer-mean top-1
+  (`ens_gap_top1`);
+- **new baselines:** base model at temperature 0; the base model's 8-answer
+  ensemble; SFT on the base model's own 8-answer mean.
+
+`ccrl train compare` reports all of these per dataset.
+
+**Waiting on:** `artifacts/frozen/` from the panel machine (RUNBOOK §8.7).
+It holds three things:
+
+- the items, because evaluation runs on exactly the panel's items;
+- the phrase bank (`banks/ddx_phrasebank.json`), which the training
+  sampler's paraphrase transform uses;
+- the prepared MedCaseReasoning cases.
+
+Until it arrives, `ccrl train build-pool`, `ccrl train reward-suite` and the
+CPU smoke tests can run.
+
 ## Order of runs (decisive comparison first)
 
 1. `ccrl train reward-suite`: 10 PASS (CPU, seconds).

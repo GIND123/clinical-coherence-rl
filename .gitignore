@@ -19,6 +19,8 @@ dist/
 # --- run outputs: ledger, raw responses, exports, training runs ---
 # Archived via `ccrl archive pack` (Zenodo / institutional storage), not git.
 /runs/
+# archives of runs/ copied around by hand (e.g. 'Archive (2).zip')
+/*.zip
 
 # --- credentialed clinical data must never enter this repo ---
 **/mimic*/

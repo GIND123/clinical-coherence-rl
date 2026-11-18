@@ -34,6 +34,14 @@ job_caps_usd:
   sequential: 40.00
   distill: 80.00
   partner_panel: 450.00
+  temp0: 60.00
+  resample: 100.00
+
+# Disk: a paid job refuses to start with less free space than this on the
+# disk holding runs/, and only the newest `keep_backups` ledger backups are
+# kept (each is a full copy of the ledger, ~0.5 GB after the main panel).
+min_free_disk_gb: 5
+keep_backups: 3
 
 # Per-model cap as a multiple of that model's expected spend in the forecast
 # for the job being run (computed from pilot medians once the pilot exists).

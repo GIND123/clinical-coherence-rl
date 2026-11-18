@@ -84,6 +84,18 @@ whether H1 replicates.
 **Distillation** (2,000 DDXPlus training renderings): Kimi K3's answers, for
 the SFT-from-teacher baseline in training.
 
+**Amendment 1 arms** (after the main panel; `docs/osf_amendment_1.md`):
+
+- **`temp0`.** Core 150 cases, calls base, perm1, para, cue, ablate and
+  retest, all 6 models, at temperature 0. This is the only job that sends a
+  temperature (`inferenceConfig.temperature`). Its request IDs include the
+  temperature, so they never collide with default-decoding requests.
+- **`resample`.** 300 DDXPlus panel cases, base and ablate, 3 independent
+  replicates each (`replicates: 3`; replicate index 1–3 in the request ID).
+  With the main panel's base, retest and ablate answers, that is 5 base and
+  4 ablated answers per case, so the evidence update can be measured on mean
+  posteriors.
+
 **Pilot only:** an extra call with a 0–100 plausibility schema (key `s`) on the
 base vignette, to test schema dependence (calibration C6 of the previous study).
 
@@ -126,8 +138,22 @@ Per (job, model, effort, dataset):
 * **Safeguards**: entropy, cross-patient information (DDXPlus).
 * **Sequential**: JS(A_final, B_final) vs floor; JS(A_final, one-shot).
 
+**Stability** (`src/ccrl/analysis/stability.py`, amendment 1):
+
+- **retest flip:** the top diagnosis differs between two identical requests;
+- **retest JS:** the floor, mean and median;
+- **single vs ensemble:** single-answer vs 8-answer-mean top-1 and Brier,
+  and the variance share of the Brier score (Proposition 5);
+- **error detection:** AUROC for a wrong base answer, by stated confidence
+  vs by the other answers' disagreement;
+- **`resample` arm:** direction agreement of the *mean* gold log-odds change
+  with the corpus LLR; share of detectable updates (> 2 SE); slope against
+  the tempered-Bayes reference.
+
 CIs: case-clustered bootstrap (2,000). Paired comparisons and
-non-inferiority (Track B): `src/ccrl/analysis/stats.py`.
+non-inferiority (Track B): `src/ccrl/analysis/stats.py`. `ccrl train
+compare` adds the raw retest JS, the retest flip rate and the ensemble gap
+(H6, H7).
 
 ## 5. Spending controls
 

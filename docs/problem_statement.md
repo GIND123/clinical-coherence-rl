@@ -6,6 +6,12 @@ Belief Revision in Open-Weight Clinical Reasoning Models**
 *Version 2, 6 Nov 2026. Supersedes the planning document's closed-model
 design (see "What changed and why" at the end).*
 
+> **Update 18 Nov 2026.** The main panel is done, and the study now produces **two papers**
+> ([papers.md](papers.md)). The main result changed the emphasis: run-to-run instability, not
+> presentation sensitivity, is the dominant incoherence ([results_panel_main.md](results_panel_main.md)).
+> The research questions below still hold. The amended training hypotheses are in
+> [osf_amendment_1.md](osf_amendment_1.md).
+
 ## 1. The problem
 
 A diagnostic language model that names the right diagnosis can still hold

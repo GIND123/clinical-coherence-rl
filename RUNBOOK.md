@@ -9,24 +9,9 @@ knowledge beyond copying commands.
 > enforces it). Credit: $1,100; hard cap in the harness: $1,000.
 > **Panel: 6 open-weight models** (Kimi K3, GLM-5, DeepSeek V3.2,
 > Qwen3-Next-80B, gpt-oss-120b, Qwen3-32B).
-> Expected total spend for everything required: about **$180** (high
-> scenario ≈ $500).
-
----
-
-## Already cloned and probed once? Start here
-
-```bash
-cd clinical-coherence-rl
-git pull                       # the design changed to the 6 open-weight models
-source .venv/bin/activate
-ccrl doctor                    # must show no FAIL except possibly "probe results are stale"
-ccrl rehearse                  # $0, ~10 min, must end with "REHEARSAL PASSED"
-ccrl models resolve            # $0
-ccrl models probe              # ~$0.10: re-probes the 6 panel models under the new settings
-```
-
-Then continue at step 3. Step 2 explains what the probe output means.
+> **Status 18 Nov 2026:** preprocessing (pilot + panel), pilot and the main
+> panel are done ($240 spent). **Continue at §8.** The remaining jobs cost
+> about $377 (total ≈ $617 of the $1,100 credit).
 
 ---
 
@@ -223,16 +208,97 @@ sleeps, the network drops, or you stop it, run the same command again.
 
 ---
 
-## 8. Secondary arms (≈1 day, ≈$55–160)
+## 8. After the main panel: secondary arms (≈1–2 days of mostly waiting, ≈$377)
 
-Each starts only after `panel_main` is complete:
+**8.1 Update (2 min, $0).** Your local edits to `config/budget.yaml` (raised
+caps) and `config/prices.yaml` (verified prices) are already in the repo
+version. Discard them, then pull:
 
 ```bash
-bash scripts/run_detached.sh run panel_ext    # replication sample: 300 more DDXPlus cases, 6 models
-bash scripts/run_detached.sh run effort_arm   # gpt-oss-120b at low / medium / high reasoning effort
-bash scripts/run_detached.sh run sequential   # two-stage evidence, 6 models
-bash scripts/run_detached.sh run distill      # 2,000 Kimi K3 answers for a training baseline
+cd clinical-coherence-rl && source .venv/bin/activate
+git checkout -- config/budget.yaml config/prices.yaml
+git pull
+ccrl doctor               # no FAIL, except "freeze" until 8.4
 ```
+
+**8.2 Confirm Flex billing (1 min, ~$0.01).** Until this is done, the guard
+counts every Flex call at the full price. The pilot and panel caps were hit
+at half their real spend for this reason, and the remaining jobs would stop
+early. The command compares Cost Explorer with the ledger on complete days.
+If they match, it records the evidence and re-counts past Flex calls at
+their real price (committed drops from about $482 to about $242).
+
+```bash
+ccrl billing confirm-flex --start 2026-11-06
+```
+
+| it prints | meaning | do |
+|---|---|---|
+| `[confirmed]` and `applied: committed total now ...` | AWS bills Flex at the Flex rate | continue |
+| `[inconclusive]` | Cost Explorer has not caught up | try again tomorrow; do 8.3–8.4 meanwhile, but do not start 8.5 until it says confirmed |
+| `[standard]` | AWS bills at full price | stop; tell the team |
+
+**8.3 Free disk space ($0).** Each job refuses to start with less than 5 GB
+free. The main panel run crashed once on a full disk.
+
+```bash
+rm -rf runs/dryrun                    # rehearsal leftovers
+ls -lh runs/backups/                  # keep the newest one; delete the others
+df -h .                               # want >= 10 GB free
+```
+
+**8.4 Re-freeze for amendment 1 and register it ($0).** Two arms were added
+after the main panel (`temp0`, `resample`; see `docs/osf_amendment_1.md`).
+
+```bash
+ccrl freeze                                     # the old FREEZE.json is kept in artifacts/frozen/freeze_history/
+shasum -a 256 artifacts/frozen/FREEZE.json      # paste into docs/osf_amendment_1.md
+ccrl plan                                       # call counts and cost per job
+```
+
+File `docs/osf_amendment_1.md` on OSF (as an update to the registration)
+**before** 8.5.
+
+**8.5 Run the remaining arms, one after another, in one detached process.**
+Plug the Mac in, keep the lid open, and start it from a normal Terminal
+window.
+
+```bash
+bash scripts/run_detached.sh queue effort_arm temp0 sequential resample distill panel_ext
+tail -f runs/logs/ccrl-queue-*.log      # Ctrl-C stops watching only
+ccrl status                             # progress and spend per model, any time
+```
+
+| job | what | calls | ≈ cost | ≈ time |
+|---|---|---|---|---|
+| effort_arm | gpt-oss-120b at low / medium / high effort | 2,700 | $2 | 20 min |
+| temp0 | 150 cases at temperature 0, 6 models | 5,400 | $30 | 1 h |
+| sequential | two-stage evidence, 6 models | 3,600 | $20 | 1 h |
+| resample | 300 DDXPlus cases, base + ablated × 3 repeats | 10,800 | $50 | 1.5 h |
+| distill | 2,000 Kimi K3 answers (training baseline) | 2,000 | $51 | 1.5 h |
+| panel_ext | replication: 300 more DDXPlus cases × 10 calls | 18,000 | $84 | 2.5 h |
+
+If it stops (sleep, network, a cap), run the same `queue` command again.
+Finished calls are never repeated, and finished jobs are skipped in seconds.
+
+**8.6 Training-set extraction (overnight, ≈ $140, ≈ 14 h).** This is needed
+only for the label-free training arm.
+
+```bash
+bash scripts/run_detached.sh prep mcr --stage extract --roles train
+```
+
+**8.7 Push the frozen inputs (2 min).** The training side evaluates on exactly
+these items.
+
+```bash
+git add config/models.lock.yaml artifacts/frozen
+git commit -m "Frozen panel inputs, model lock and amendment-1 freeze"
+git push
+```
+
+Without push access, zip `config/models.lock.yaml` and the whole
+`artifacts/frozen/` folder and send them.
 
 ---
 
@@ -280,7 +346,9 @@ git push
 | `Freeze check failed: changed: [...]` | an input changed after `ccrl freeze` | undo the edit; if it was intended, tell the team before re-freezing |
 | `config/models.yaml changed for [...] since they were probed` | the probe results are older than the model settings | run the printed `ccrl models probe --models ...` (a few cents) |
 | `hard cap $1000.00` / `job cap` in the summary | a cap was reached | `ccrl status`; tell the team; do not edit caps without agreement |
-| `committed` in the log is about 2× the AWS bill | the guard counts Flex calls at full price until `guard_counts_flex: true` (§6) | expected; nothing is overspent |
+| `committed` in the log is about 2× the AWS bill | the guard counts Flex calls at full price until Flex billing is confirmed | `ccrl billing confirm-flex --start 2026-11-06` (§8.2) |
+| `Only ... GB free on the disk` | the disk check before a job | free space (§8.3), then re-run the same command |
+| `WARNING: raw mirror not written` | the disk filled during a run; the ledger still has everything | free space soon; the run continues |
 | a detached job is no longer running, no error in the log | the Mac slept (lid closed) or the shell that started it ended | run the same command again from a normal Terminal window |
 | `model_halted` / `ValidationException` | Bedrock rejected a parameter for one model | other models continue; re-run `ccrl models probe --models <key>` and send the output |
 | `effort_arm: gpt-oss-120b has no working reasoning-effort control` | the probe found the effort setting ignored | nothing to do; tell the team (the arm is skipped) |

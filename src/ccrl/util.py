@@ -7,6 +7,7 @@ import json
 import os
 import random
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -125,15 +126,30 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> int:
     return n
 
 
+_APPEND_LOCKS: dict[str, threading.Lock] = {}
+_APPEND_LOCKS_GUARD = threading.Lock()
+
+
+def _append_lock(path: Path) -> threading.Lock:
+    key = str(Path(path).resolve())
+    with _APPEND_LOCKS_GUARD:
+        return _APPEND_LOCKS.setdefault(key, threading.Lock())
+
+
 def append_jsonl(path: Path, row: dict) -> None:
-    """Durable append (flush + fsync) for the raw-response mirror."""
+    """Durable append (flush + fsync) for the raw-response mirror.
+
+    Thread-safe per file: the runner's worker threads share one file per
+    model, and unsynchronised appends of large rows interleave (seen in the
+    2026-11-17 panel run: 135 mirror lines merged; the ledger was intact)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a", encoding="utf-8", newline="\n") as f:
-        f.write(json.dumps(row, ensure_ascii=False, sort_keys=True))
-        f.write("\n")
-        f.flush()
-        os.fsync(f.fileno())
+    line = json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n"
+    with _append_lock(path):
+        with open(path, "a", encoding="utf-8", newline="\n") as f:
+            f.write(line)
+            f.flush()
+            os.fsync(f.fileno())
 
 
 # ---------------------------------------------------------------- time

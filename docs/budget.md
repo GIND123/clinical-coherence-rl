@@ -23,6 +23,8 @@ open-weight models.
 | effort_arm | B | 150 × 6 calls × 3 efforts × gpt-oss-120b | 2,700 |
 | sequential | B | 150 × 2 orders × 2 turns × 6 models | 3,600 |
 | distill | B | 2,000 × Kimi K3 | 2,000 |
+| temp0 | B (amendment 1) | core 150 × 6 calls × 6 models at temperature 0 | 5,400 |
+| resample | B (amendment 1) | 300 DDXPlus × (base, ablate) × 3 replicates × 6 models | 10,800 |
 | partner_panel | C (optional) | 600 × 10 × whichever partner models AWS enables | ≤ 30,000 |
 
 ## Pre-pilot forecast (USD)
@@ -61,31 +63,63 @@ After the pilot, `ccrl report pilot` re-forecasts every remaining job from
 the measured mean (expected) and p90 (high) output tokens per model. Expect
 the "high" column to be the realistic one for reasoning-heavy models.
 
-## Measured so far (7–8 Nov 2026)
+## Measured (7–18 Nov 2026): $240.36 spent
 
-- **MedCaseReasoning extraction:** 436 pilot/panel cases with Kimi K3 cost
-  **$28.47** reported by the ledger, about **$0.065 per case**. AWS's credit
-  page showed $28.98 used.
-- **So:** the price table and the Flex discount match AWS's own estimate. The
-  2,150-case training extraction will cost about $140; its job cap is $350
-  in guard terms.
-- **Credits:** AWS draws the spend from the credit (estimated remaining
-  $1,071.02 of $1,100), not the card.
+From the PI's ledger (reported cost; AWS's Credits page matched the ledger
+within 1% on 7 Nov).
+
+| job | calls | reported cost |
+|---|---|---|
+| preprocessing (phrase bank, 436 extractions + verifications) | 905 | $29.73 |
+| pilot | 2,014 | $10.41 |
+| panel_main | 36,504 | $200.19 |
+| probes | 143 | $0.02 |
+
+Measured cost per call (Flex), main panel:
+
+| model | DDXPlus | real cases | output tokens (mean) |
+|---|---|---|---|
+| Kimi K3 | $0.0255 | $0.0376 | 3,661 (reasoning) |
+| GLM-5 | $0.0009 | $0.0004 | 189 |
+| DeepSeek V3.2 | $0.0006 | $0.0003 | 219 |
+| gpt-oss-120b | $0.0005 | $0.0003 | 1,170 (reasoning) |
+| Qwen3-Next-80B | $0.0002 | $0.0001 | 188 |
+| Qwen3-32B | $0.0001 | $0.0001 | 178 |
+
+Kimi K3 is 95% of the panel cost. The main panel came in above the pre-pilot
+"high" forecast ($182), because Kimi K3 writes about 3,700 tokens of
+reasoning per answer, against the 2,500 assumed.
+
+## Remaining (forecast from measured per-call costs)
+
+| job | calls | expected |
+|---|---|---|
+| effort_arm | 2,700 | $2 |
+| temp0 (amendment 1) | 5,400 | $30 |
+| sequential | 3,600 | $20 |
+| resample (amendment 1) | 10,800 | $50 |
+| distill | 2,000 | $51 |
+| panel_ext | 18,000 | $84 |
+| MedCaseReasoning training extraction | 2,150 | $140 |
+| **total remaining** | **44,650** | **≈ $377** |
+
+**Projected total ≈ $617 of $1,100**, leaving about $480 of credit unused.
+That reserve covers re-runs and the optional partner arm.
 
 ## Caps (enforced on every call)
 
 **Guard cost vs real cost.** Caps are checked against the conservative
-*guard* cost, never the reported cost. The guard takes full Standard price
-(no Flex discount) × 1.25 for unverified prices, so for Flex-served models it
-runs about 2.5× the real spend (e.g. $58 committed vs $28 spent after the
-extraction). Two settings in `config/prices.yaml` bring it down to the real
-figure; neither needs a re-freeze:
+*guard* cost, never the reported cost. Until Flex billing is confirmed, the
+guard takes the full Standard price for Flex calls, so it runs about 2× the
+real spend. At the end of the main panel it showed $482 committed for $240
+spent. This is why the pilot and panel job caps were hit early.
 
-- `verified: true` per confirmed row removes the 1.25;
-- `guard_counts_flex: true` removes the 2×, set once `ccrl billing reconcile`
-  confirms Flex billing.
-
-
+`ccrl billing confirm-flex --start 2026-11-06` fixes it. It compares Cost
+Explorer with the ledger on complete days, records the evidence in
+`runs/flex_confirmed.json`, and re-counts past Flex calls at their real
+price. Nothing in `config/` changes, and no re-freeze is needed. Run it
+before the remaining jobs. Without it, the $1,000 hard cap would stop them at
+about $760 of real spend.
 
 - **Hard cap:** $1,000 across everything.
 - **Job caps:** about 1.5 × the high scenario (`config/budget.yaml`).
@@ -95,13 +129,12 @@ figure; neither needs a re-freeze:
 
 ## Headroom
 
-A + B leaves roughly $500–800 of the cap unused even in the high scenario.
-It is held, in this order, for:
+About $480 of credit stays unused after everything planned. It is held, in
+this order, for:
 
-1. Real token counts exceeding the forecast. Reasoning models can be several
-   times more verbose than assumed; the pilot will tell.
+1. Real token counts exceeding the forecast (Kimi K3 already did once).
 2. Re-runs of failed items.
 3. The optional `partner_panel`, if AWS enables partner models in time to
    finish by 18 Dec (about 2 days of running).
 
-Nothing is added to the confirmatory design after the OSF registration.
+Additions after the main panel are filed as OSF amendments before they run (docs/osf_amendment_1.md).

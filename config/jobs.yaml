@@ -72,3 +72,30 @@ jobs:
     efforts: [default]
     skip_unavailable: true        # models without a passing probe are skipped, not an error
     requires_completed: [panel_main]
+
+  # ------------------------------------------------------------------------
+  # Amendment 1 (2026-11-18, after panel_main; docs/osf_amendment_1.md).
+  # panel_main showed that most run-to-run variation is sampling noise at
+  # provider-default decoding. These two arms separate noise from systematic
+  # effects. Filed on OSF before they run and before any training.
+  # ------------------------------------------------------------------------
+  temp0:
+    priority: B
+    description: decoding robustness - core 150 (75 + 75) x 6 calls x 6 panel models at temperature 0
+    item_set: core
+    transform_set: effort6
+    models: panel
+    efforts: [default]
+    temperature: 0.0
+    requires_completed: [panel_main]
+
+  resample:
+    priority: B
+    description: noise vs bias in evidence updating - 300 DDXPlus panel cases x (base, ablate) x 3 replicates x 6 models
+    item_set: panel
+    datasets: [ddxplus]
+    transform_set: base_ablate
+    replicates: 3
+    models: panel
+    efforts: [default]
+    requires_completed: [panel_main]

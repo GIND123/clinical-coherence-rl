@@ -113,6 +113,7 @@ transform_sets:
   effort6: [base, perm1, para, cue, ablate, retest]
   pilot: [base, perm1, perm2, perm3, dup, para, cue, authority, ablate, retest, schema_scores]
   base_only: [base]
+  base_ablate: [base, ablate]     # resample arm (amendment 1)
 
 authority_cue:
   stated_reliability: 0.5       # "correct 50% of the time" -> normative LR = r(K-1)/(1-r)

@@ -24,23 +24,28 @@ more coherent than much larger ones.
 | what | 6 open-weight models on Amazon Bedrock (Kimi K3, GLM-5, DeepSeek V3.2, Qwen3-Next-80B, gpt-oss-120b, Qwen3-32B), run **once**, archived | Qwen3-4B / 8B with LoRA: coherence-gated GRPO vs RLVR, RLCR, BCT, SFT, logit read-out |
 | data | 600 confirmatory cases (300 DDXPlus + 300 real case reports) × 10 presentations; 300-case replication sample; effort and sequential arms | DDXPlus training split (8 pathologies held out); unlabeled MedCaseReasoning cases |
 | joined by | the same frozen items: trained models enter the panel's tables (H6: trained 8B vs Qwen3-32B and the panel median) | |
-| runs on | the PI's machine, PI's AWS credentials, before 18 Dec 2026 (≈$180 expected) | a GPU workstation, starting now |
+| runs on | the PI's machine, PI's AWS credentials, before 18 Dec 2026 ($240 spent, ≈ $617 projected) | a GPU workstation, starting now |
 | start here | **[RUNBOOK.md](RUNBOOK.md)** | **[docs/training.md](docs/training.md)** |
 
-## Status (6 Nov 2026)
+## Status (18 Nov 2026)
 
 | component | state |
 |---|---|
-| Problem statement, pre-registration draft | rewritten for the open-weight panel |
-| DDXPlus inputs (KB, corpus likelihoods, 2,620 selected cases, held-out pathologies) | **built and committed** (md5-checked source) |
-| MedCaseReasoning selection (2,586 cases queued for preprocessing) | **built and committed** (sha256-checked source) |
-| Bedrock harness: model resolution and probing, budget-guarded idempotent runner, ledger, pilot gates, Cost Explorer reconciliation, export and archive | **done; rehearsed end to end on an offline mock** |
-| Model access | 6 panel models probed OK on the PI's account; closed partner models unavailable (optional arm only) |
-| Preprocessing (phrase bank, MedCaseReasoning extraction and verification) | code done; **paid run pending** (RUNBOOK §4) |
-| Items, freeze, pilot, panel, arms | code done; **paid runs pending** (RUNBOOK §5–8) |
-| Reward and synthetic-policy suite (Propositions 2 and 4) | **done; 10/10 criteria pass** |
+| **Main panel** (600 cases × 10 calls × 6 models) and pilot | **done** on the PI's account ($240 spent); results in [docs/results_panel_main.md](docs/results_panel_main.md) |
+| Plan | **two papers** ([docs/papers.md](docs/papers.md)): a clinical evaluation of open-weight models, and the coherence-reward method |
+| OSF amendment 1 (noise arms `temp0`, `resample`; amended training hypotheses) | drafted ([docs/osf_amendment_1.md](docs/osf_amendment_1.md)); file before those arms run |
+| Secondary arms (effort, sequential, replication, distillation, temp0, resample) and training extraction | code done, rehearsed; **paid runs pending** (RUNBOOK §8, ≈ $377) |
+| Frozen inputs from the PI's machine (`artifacts/frozen/`, `models.lock.yaml`) | **to be pushed** (RUNBOOK §8.7) |
+| Reward and synthetic-policy suite (Propositions 2 and 4) | done; 10/10 criteria pass |
 | Trainer, baselines, local evaluation, trained-vs-panel comparison | code done; CPU smoke-tested; GPU runs pending |
-| Tests | `python -m pytest -q` (CPU, ~2 min) |
+| Tests | `python -m pytest -q` (CPU, ~3 min) |
+
+**Headline so far.** At provider-default decoding, the leading diagnosis
+changes in 9–43% of cases when the *identical* question is asked twice.
+Beyond that noise, re-ordering, rewording or padding the case adds little.
+Averaging equivalent answers raises top-1 by up to 12.8 points. For the
+noisier models, disagreement between two answers flags errors better than
+the model's stated confidence.
 
 ## Quick start
 
@@ -97,7 +102,7 @@ Then follow [RUNBOOK.md](RUNBOOK.md) step by step.
 | `src/ccrl/analysis/` | metrics, estimands, statistics, report |
 | `src/ccrl/reward/` | the coherence-gated reward and the synthetic-policy suite |
 | `src/ccrl/train/` | paired-group GRPO, SFT/BCT, logit read-out, local evaluation, trained-vs-panel comparison |
-| `docs/` | [problem statement](docs/problem_statement.md), [design](docs/design.md), [theory](docs/theory.md), [literature review](docs/literature_review.md), [pre-registration](docs/preregistration.md), [budget](docs/budget.md), [training](docs/training.md), [data cards](docs/data_cards.md) |
+| `docs/` | [two-paper plan](docs/papers.md), [main-panel results](docs/results_panel_main.md), [OSF amendment 1](docs/osf_amendment_1.md), [problem statement](docs/problem_statement.md), [design](docs/design.md), [theory](docs/theory.md), [literature review](docs/literature_review.md), [pre-registration](docs/preregistration.md), [budget](docs/budget.md), [training](docs/training.md), [data cards](docs/data_cards.md) |
 | `tests/` | CPU tests |
 
 ## Data and licences
