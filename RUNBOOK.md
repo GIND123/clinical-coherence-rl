@@ -232,6 +232,14 @@ their real price (committed drops from about $482 to about $242).
 ccrl billing confirm-flex --start 2026-11-06
 ```
 
+**No Cost Explorer access** (e.g. only a Bedrock API key on this machine)?
+Open AWS console → Billing → Credits and read **Total estimated amount used**.
+Pass that figure instead; the newest paid call must be at least 48 h old:
+
+```bash
+ccrl billing confirm-flex --aws-total 241.50     # use the number shown on the Credits page
+```
+
 | it prints | meaning | do |
 |---|---|---|
 | `[confirmed]` and `applied: committed total now ...` | AWS bills Flex at the Flex rate | continue |

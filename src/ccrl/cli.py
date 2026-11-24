@@ -184,6 +184,8 @@ def cmd_billing(a) -> int:
     if a.action == "reprice-flex":
         return billing.reprice_flex(get_ws(a.dry_run), apply=a.apply)
     if a.action == "confirm-flex":
+        if a.aws_total is not None:
+            return billing.confirm_flex_manual(get_ws(a.dry_run), a.aws_total)
         if not a.start:
             raise SystemExit("billing confirm-flex needs --start YYYY-MM-DD (first day of paid runs)")
         return billing.confirm_flex(get_ws(a.dry_run), a.start, a.profile)
@@ -327,6 +329,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--start", default=None)
     s.add_argument("--end", default=None)
     s.add_argument("--apply", action="store_true", help="reprice-flex: write the change")
+    s.add_argument("--aws-total", type=float, default=None,
+                   help="confirm-flex without Cost Explorer: Billing -> Credits 'Total estimated amount used' in USD")
     s.set_defaults(fn=cmd_billing)
 
     s = sub.add_parser("analyze", help="offline estimands, tables and figures")

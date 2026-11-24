@@ -186,3 +186,30 @@ def test_flex_verdict():
     assert v == "standard"
     v, _ = flex_verdict({"2026-11-07": 3.0}, {"2026-11-07": 3.0}, "2026-11-20")
     assert v == "inconclusive"
+
+
+def test_confirm_flex_manual(tmp_runs, monkeypatch):
+    """Without Cost Explorer: compare the Credits-page total with the ledger,
+    only once the newest call is old enough for the AWS figure to be complete."""
+    import datetime as dt
+
+    from ccrl import billing, paths
+    from ccrl.bedrock.ledger import Ledger
+    from ccrl.workspace import get as get_ws
+    ws = get_ws(True)
+    led = Ledger(ws.ledger)
+    led.ensure_requests([{"request_id": "a", "job": "panel_main", "model_key": "kimi-k3", "item_id": "a"}])
+    led.open_attempt("a", 1, 1, 0.3, "{}")
+    old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=5)).isoformat()
+    led.close_attempt("a", 1, 1, status="ok", cost_reported=240.0, cost_guard=480.0, served_tier="flex",
+                      finished_at=old)
+    led.close()
+    assert billing.confirm_flex_manual(ws, 480.0) == 2                       # billed at Standard: refuse
+    assert not (paths.RUNS / "flex_confirmed.json").exists()
+    assert billing.confirm_flex_manual(ws, 241.5) == 0                       # Flex confirmed and repriced
+    assert (paths.RUNS / "flex_confirmed.json").exists()
+    led = Ledger(ws.ledger)
+    try:
+        assert led.committed() < 300
+    finally:
+        led.close()

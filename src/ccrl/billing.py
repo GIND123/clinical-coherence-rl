@@ -202,3 +202,49 @@ def confirm_flex(ws: Workspace, start: str, profile: str | None = None) -> int:
     print("Inconclusive (too little spend on complete days, or Cost Explorer has not caught up). Try again in a "
           "day; nothing was changed.")
     return 1
+
+
+def confirm_flex_manual(ws: Workspace, aws_total: float, min_age_hours: float = 48.0) -> int:
+    """`ccrl billing confirm-flex --aws-total 241.50`: the same check without
+    Cost Explorer access (e.g. a machine with only a Bedrock API key).
+
+    Compare the Credits page's "Total estimated amount used" with the
+    ledger's total reported cost. Valid only when the newest paid call is at
+    least 48 h old, so the AWS figure is complete (no billing lag)."""
+    import json
+
+    from ccrl import paths
+    from ccrl.util import now_iso
+
+    led = Ledger(ws.ledger)
+    try:
+        row = led.q("SELECT SUM(cost_reported) AS c, MAX(finished_at) AS last FROM attempts "
+                    "WHERE status IN ('ok','truncated','refused')")[0]
+        inflight = led.q("SELECT COUNT(*) AS n FROM attempts WHERE status='inflight'")[0]["n"]
+    finally:
+        led.close()
+    total, last = float(row["c"] or 0.0), row["last"]
+    if not last or total < 20:
+        print("Too little spend in the ledger to compare; nothing changed.")
+        return 1
+    age_h = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(last).astimezone(dt.timezone.utc)
+             ).total_seconds() / 3600
+    if inflight or age_h < min_age_hours:
+        print(f"The newest paid call is {age_h:.0f} h old (need >= {min_age_hours:.0f} h with nothing running), so "
+              "the AWS figure may still be incomplete. Try again later; nothing changed.")
+        return 1
+    r = aws_total / total
+    verdict = "confirmed" if 0.85 <= r <= 1.20 else ("standard" if r >= 1.5 else "inconclusive")
+    print(f"AWS Credits page ${aws_total:.2f} vs ledger reported ${total:.2f} (newest call {age_h:.0f} h ago) "
+          f"-> ratio {r:.3f}  [{verdict}]")
+    if verdict == "confirmed":
+        (paths.RUNS / "flex_confirmed.json").write_text(json.dumps({
+            "method": "credits_page_total", "aws_total": aws_total, "ledger_reported": round(total, 4),
+            "ratio": round(r, 4), "newest_call": last, "confirmed_at": now_iso()}, indent=2), encoding="utf-8")
+        print("Flex billing confirmed; recorded in runs/flex_confirmed.json. Re-counting past Flex calls:")
+        return reprice_flex(ws, apply=True)
+    if verdict == "standard":
+        print("AWS appears to bill these calls at about the Standard price. Do NOT reprice; tell the team.")
+        return 2
+    print("Ratio outside the expected range; nothing changed. Send this output to the team.")
+    return 1

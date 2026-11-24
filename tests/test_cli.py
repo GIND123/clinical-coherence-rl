@@ -22,6 +22,7 @@ def test_every_module_compiles():
     ["train", "reward-suite"], ["--dry-run", "status"], ["run", "partner_panel"],
     ["train", "compare", "--ref", "a.parquet", "--new", "b.parquet", "--ref-model", "qwen3-32b"],
     ["queue", "effort_arm", "temp0", "resample"], ["billing", "confirm-flex", "--start", "2026-11-06"],
+    ["billing", "confirm-flex", "--aws-total", "241.5"],
     ["billing", "reprice-flex", "--apply"],
 ])
 def test_parser_accepts(argv):
