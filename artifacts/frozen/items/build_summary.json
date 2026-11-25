@@ -1,0 +1,33 @@
+{
+  "n_items": 11630,
+  "sets": {
+    "pilot": 330,
+    "panel": 6000,
+    "core": 900,
+    "sequential": 300,
+    "distill": 2000,
+    "panel_ext": 3000
+  },
+  "transforms": {
+    "base": 2930,
+    "perm1": 930,
+    "perm2": 930,
+    "perm3": 930,
+    "dup": 930,
+    "para": 930,
+    "cue": 930,
+    "authority": 930,
+    "ablate": 930,
+    "retest": 930,
+    "seqA": 150,
+    "seqB": 150,
+    "schema_scores": 30
+  },
+  "datasets": {
+    "ddxplus": 8520,
+    "medcase": 3110
+  },
+  "phrasebank": "/Users/balubhasuran/Documents/Codex/2026-06-24/i-have-1100-usd-in-my/clinical-coherence-rl/artifacts/frozen/banks/ddx_phrasebank.json",
+  "warnings": [],
+  "items_sha256": "ba74b6c1dbd206be83492e55455f1688e3e4aa4451d5fad3f036536bcacb223c"
+}

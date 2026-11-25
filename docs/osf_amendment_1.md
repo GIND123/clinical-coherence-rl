@@ -2,7 +2,7 @@
 
 *File this on OSF **before** running `temp0` or `resample` and before any
 training run. Attach the new freeze hash after re-freezing:
-`shasum -a 256 artifacts/frozen/FREEZE.json` →* `__________`
+`shasum -a 256 artifacts/frozen/FREEZE.json` →* `ea6f2a247fb903cebdf9034553cf4aa14dde1011c336be2ef16954d62dc39200`
 *The previous freeze file is kept in `artifacts/frozen/freeze_history/`.*
 
 ## 1. Status at the time of the amendment

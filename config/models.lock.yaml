@@ -1,0 +1,691 @@
+models:
+  opus-5.5:
+    model_id: us.anthropic.claude-opus-5-5
+    price_key: opus-5.5
+    region: us-east-1
+    effort_strategy: output_config
+    default_effort: low
+    service_tier: default
+    prompt_cache: true
+    extra_fields:
+      thinking:
+        type: adaptive
+        display: summarized
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 6
+    probe:
+      ok: false
+      error: 'AccessDeniedException: anthropic.claude-opus-5-5 is not available for
+        this account. You can explore other available models on Amazon Bedrock. For
+        additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-opus-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:global.anthropic.claude-opus-5-5
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-opus-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:anthropic.claude-opus-5-5
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-opus-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:41:19-05:00'
+  sonnet-5.5:
+    model_id: us.anthropic.claude-sonnet-5-5
+    price_key: sonnet-5.5
+    region: us-east-1
+    effort_strategy: output_config
+    default_effort: low
+    service_tier: default
+    prompt_cache: true
+    extra_fields:
+      thinking:
+        type: adaptive
+        display: summarized
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 6
+    probe:
+      ok: false
+      error: 'AccessDeniedException: anthropic.claude-sonnet-5-5 is not available
+        for this account. You can explore other available models on Amazon Bedrock.
+        For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-sonnet-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:global.anthropic.claude-sonnet-5-5
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-sonnet-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:anthropic.claude-sonnet-5-5
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: anthropic.claude-sonnet-5-5 is not available for this account. You can
+          explore other available models on Amazon Bedrock. For additional access
+          options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:41:21-05:00'
+  gpt-6-sol:
+    model_id: global.openai.gpt-6-sol
+    price_key: gpt-6-sol
+    region: us-east-1
+    effort_strategy: output_config
+    default_effort: low
+    service_tier: default
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 6
+    probe:
+      ok: false
+      error: 'AccessDeniedException: openai.gpt-6-sol is not available for this account.
+        You can explore other available models on Amazon Bedrock. For additional access
+        options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-sol is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:us.openai.gpt-6-sol
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-sol is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:openai.gpt-6-sol
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-sol is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:41:23-05:00'
+  gpt-6-luna:
+    model_id: global.openai.gpt-6-luna
+    price_key: gpt-6-luna
+    region: us-east-1
+    effort_strategy: output_config
+    default_effort: low
+    service_tier: default
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 6
+    probe:
+      ok: false
+      error: 'AccessDeniedException: openai.gpt-6-luna is not available for this account.
+        You can explore other available models on Amazon Bedrock. For additional access
+        options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-luna is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:us.openai.gpt-6-luna
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-luna is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:openai.gpt-6-luna
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-luna is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:41:25-05:00'
+  grok-4.6:
+    model_id: global.xai.grok-4.6
+    price_key: grok-4.6
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: false
+      error: 'AccessDeniedException: xai.grok-4.6 is not available for this account.
+        You can explore other available models on Amazon Bedrock. For additional access
+        options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: xai.grok-4.6 is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:us.xai.grok-4.6
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: xai.grok-4.6 is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:xai.grok-4.6
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: xai.grok-4.6 is not available for this account. You can explore other
+          available models on Amazon Bedrock. For additional access options, contact
+          AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:41:27-05:00'
+  kimi-k3:
+    model_id: us.moonshotai.kimi-k3
+    price_key: kimi-k3
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check: null
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 112
+          outputTokens: 56
+          totalTokens: 168
+          cacheReadInputTokens: 0
+          cacheWriteInputTokens: 0
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 112
+          outputTokens: 67
+          totalTokens: 179
+          cacheReadInputTokens: 0
+          cacheWriteInputTokens: 0
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 7
+          outputTokens: 238
+          totalTokens: 646
+          cacheReadInputTokens: 401
+          cacheWriteInputTokens: 0
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:58:16-05:00'
+    registry_sig: 81fce47fe95a5e0d
+  deepseek-v3.2:
+    model_id: deepseek.v3.2
+    price_key: deepseek-v3.2
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check: null
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 22
+          outputTokens: 2
+          totalTokens: 24
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 22
+          outputTokens: 2
+          totalTokens: 24
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 314
+          outputTokens: 40
+          totalTokens: 354
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:58:37-05:00'
+    registry_sig: ec8bd2040e792593
+  glm-5:
+    model_id: zai.glm-5
+    price_key: glm-5
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check: null
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 22
+          outputTokens: 2
+          totalTokens: 24
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 22
+          outputTokens: 2
+          totalTokens: 24
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 320
+          outputTokens: 40
+          totalTokens: 360
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:58:34-05:00'
+    registry_sig: a6620fcb10cf2499
+  qwen3-next-80b:
+    model_id: qwen.qwen3-next-80b-a3b
+    price_key: qwen3-next-80b
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check: null
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 29
+          outputTokens: 2
+          totalTokens: 31
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 29
+          outputTokens: 2
+          totalTokens: 31
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 334
+          outputTokens: 41
+          totalTokens: 375
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:58:39-05:00'
+    registry_sig: 951d3f7c6e3c5b44
+  gpt-oss-120b:
+    model_id: openai.gpt-oss-120b-1:0
+    price_key: gpt-oss-120b
+    region: us-east-1
+    effort_strategy: reasoning_field
+    default_effort: medium
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check:
+        low_output_tokens: 66
+        high_output_tokens: 1657
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 87
+          outputTokens: 44
+          totalTokens: 131
+        served_tier: default
+        stop: end_turn
+      - step: effort:reasoning_field
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 87
+          outputTokens: 38
+          totalTokens: 125
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 87
+          outputTokens: 61
+          totalTokens: 148
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 381
+          outputTokens: 210
+          totalTokens: 591
+        served_tier: flex
+        stop: end_turn
+      - step: toy_low
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 381
+          outputTokens: 66
+          totalTokens: 447
+        served_tier: flex
+        stop: end_turn
+      - step: toy_high
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 381
+          outputTokens: 1657
+          totalTokens: 2038
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:58:59-05:00'
+    registry_sig: 7987492b36ff4a42
+  qwen3-32b:
+    model_id: qwen.qwen3-32b-v1:0
+    price_key: qwen3-32b
+    region: us-east-1
+    effort_strategy: none
+    default_effort: null
+    service_tier: flex
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: true
+      warnings: []
+      toy_parse_ok: true
+      toy_dx: AA
+      effort_check: null
+      log:
+      - step: ping
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 33
+          outputTokens: 2
+          totalTokens: 35
+        served_tier: default
+        stop: end_turn
+      - step: tier:flex
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 33
+          outputTokens: 3
+          totalTokens: 36
+        served_tier: flex
+        stop: end_turn
+      - step: toy_posterior
+        status: ok
+        error: null
+        msg: ''
+        usage:
+          inputTokens: 338
+          outputTokens: 41
+          totalTokens: 379
+        served_tier: flex
+        stop: end_turn
+      at: '2026-11-06T19:59:01-05:00'
+    registry_sig: d0764bec4bae24d2
+  gpt-6-astra:
+    model_id: global.openai.gpt-6-astra
+    price_key: gpt-6-astra
+    region: us-east-1
+    effort_strategy: output_config
+    default_effort: low
+    service_tier: default
+    prompt_cache: false
+    extra_fields: {}
+    max_tokens:
+      low: 8192
+      medium: 16384
+      high: 32768
+      default: 16384
+    read_timeout_s: 1200
+    connect_timeout_s: 30
+    concurrency: 4
+    probe:
+      ok: false
+      error: 'AccessDeniedException: openai.gpt-6-astra is not available for this
+        account. You can explore other available models on Amazon Bedrock. For additional
+        access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/'
+      log:
+      - step: ping
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-astra is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:us.openai.gpt-6-astra
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-astra is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      - step: ping_alt:openai.gpt-6-astra
+        status: unbilled_error
+        error: AccessDeniedException
+        msg: openai.gpt-6-astra is not available for this account. You can explore
+          other available models on Amazon Bedrock. For additional access options,
+          contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/
+        usage: {}
+        served_tier: null
+        stop: null
+      at: '2026-11-06T18:42:04-05:00'
+generated_at: '2026-11-06T19:58:11-05:00'
+python: 3.13.5
+boto3: 1.43.124
+botocore: 1.43.124
