@@ -24,7 +24,7 @@ from ccrl.util import local_now, now_iso, sha256_file, write_json
 from ccrl.workspace import Workspace
 
 PANEL_JOBS = ("pilot", "panel_main", "panel_ext", "effort_arm", "sequential", "distill", "partner_panel",
-              "temp0", "resample")
+              "temp0", "resample", "temp0_panel", "temp0_ext")
 
 
 def _df(ledger: Ledger, sql: str) -> pd.DataFrame:

@@ -194,6 +194,19 @@ def cmd_billing(a) -> int:
     return billing.reconcile(get_ws(a.dry_run), a.start, a.end, a.profile)
 
 
+def cmd_contamination(a) -> int:
+    from ccrl.panel import contamination as C
+    ws = get_ws(a.dry_run)
+    if a.action == "plan":
+        C.plan(ws, _csv(a.models), a.limit_cases)
+    elif a.action == "run":
+        C.run(ws, _csv(a.models), a.limit_cases, a.max_spend, a.profile)
+    else:
+        out = C.analyze(ws)
+        print(f"contamination tables written to {out}")
+    return 0
+
+
 def cmd_analyze(a) -> int:
     from ccrl.analysis import report
     out = report.run(get_ws(a.dry_run), jobs=_csv(a.jobs))
@@ -206,8 +219,13 @@ def cmd_rehearse(a) -> int:
     from ccrl.analysis import report
     from ccrl.archive import export
     from ccrl.bedrock import models as M
-    from ccrl.panel import freeze, items, jobs, qa
+    from ccrl.panel import contamination, freeze, items, jobs, qa
     from ccrl.prep import medcase, phrasebank
+
+    def _assert_noop(summary):
+        if summary.get("ran"):
+            raise SystemExit(f"rerun sent {summary['ran']} calls again")
+        return summary
 
     dry = paths.RUNS / "dryrun"
     if dry.exists():
@@ -241,12 +259,20 @@ def cmd_rehearse(a) -> int:
     step("run sequential (limited)", lambda: jobs.run_job("sequential", ws, limit_cases=max(2, n // 4), force_order=True))
     step("run temp0 (limited)", lambda: jobs.run_job("temp0", ws, limit_cases=max(2, n // 4), force_order=True))
     step("run resample (limited)", lambda: jobs.run_job("resample", ws, limit_cases=max(2, n // 4), force_order=True))
+    step("run temp0_panel (limited)", lambda: jobs.run_job("temp0_panel", ws, limit_cases=max(2, n // 4),
+                                                          force_order=True))
+    step("run temp0_ext (limited)", lambda: jobs.run_job("temp0_ext", ws, limit_cases=max(2, n // 4),
+                                                        force_order=True))
+    step("contamination probe (limited)", lambda: contamination.run(ws, limit_cases=max(2, n // 4)))
+    step("contamination rerun (must be a no-op)",
+         lambda: _assert_noop(contamination.run(ws, limit_cases=max(2, n // 4))))
     step("queue rerun (must be a no-op)", lambda: cmd_queue(argparse.Namespace(
         dry_run=True, jobs=["temp0", "resample"], models=None, limit_cases=max(2, n // 4), force_order=True,
         profile=None)))
     step("rerun panel_main (must be a no-op)", lambda: jobs.run_job("panel_main", ws, limit_cases=n, force_order=True))
     step("status", lambda: print(qa.status(ws)))
     step("analyze", lambda: report.run(ws))
+    step("contamination analyze", lambda: contamination.analyze(ws))
     step("archive pack", lambda: export.pack(ws))
     print(f"\nREHEARSAL PASSED ({len(steps)} steps). Everything is under {dry} — delete it any time.")
     return 0
@@ -332,6 +358,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--aws-total", type=float, default=None,
                    help="confirm-flex without Cost Explorer: Billing -> Credits 'Total estimated amount used' in USD")
     s.set_defaults(fn=cmd_billing)
+
+    s = sub.add_parser("contamination", help="Amendment 2: memorisation probe for the real case reports")
+    s.add_argument("action", choices=["plan", "run", "analyze"])
+    s.add_argument("--models", help="restrict to these registry keys")
+    s.add_argument("--limit-cases", type=int, default=None, help="only the first N cases (testing)")
+    s.add_argument("--max-spend", type=float, default=None, help="extra USD cap for this invocation")
+    s.set_defaults(fn=cmd_contamination)
 
     s = sub.add_parser("analyze", help="offline estimands, tables and figures")
     s.add_argument("--jobs", help="comma-separated jobs (default: all panel jobs present)")

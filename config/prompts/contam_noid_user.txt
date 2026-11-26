@@ -1,0 +1,5 @@
+{candidates_section}Publication: a published case report (its identity is withheld).
+
+The clinical details of this case report are withheld. Give your probability that each candidate is the final diagnosis it reports.
+
+Give your answer as the JSON object described above.

@@ -36,6 +36,10 @@ job_caps_usd:
   partner_panel: 450.00
   temp0: 60.00
   resample: 100.00
+  # Amendment 2 (2026-11-26): measured temp0 cost ~$0.00035/call without Kimi K3
+  temp0_panel: 55.00            # 30,000 calls; forecast expected $17, high $45
+  temp0_ext: 30.00              # 15,000 calls; forecast expected $9, high $23
+  contamination: 200.00         # 7,200 calls; forecast expected $40, high $176 (Kimi K3 ~95%)
 
 # Disk: a paid job refuses to start with less free space than this on the
 # disk holding runs/, and only the newest `keep_backups` ledger backups are

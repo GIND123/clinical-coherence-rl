@@ -1,12 +1,17 @@
 {
-  "created_at": "2026-11-23T17:47:22-05:00",
-  "git_commit": "3e17eb591adfc5c8bd6d58c61884b4964a47cd63",
+  "created_at": "2026-11-26T17:41:28-05:00",
+  "git_commit": "c2adb36768736d398d103b2c0cc2e69d073c2d0a",
   "dry_run": false,
   "files": {
     "config/cues.yaml": "7f61d815b2ede741a3257dd78fda9fedc61ff6b82428bf9aa2b6abfa03efeb63",
-    "config/jobs.yaml": "bd2e843eef7ef7cf02c3a63ea8c626e920dd22404e56bda0d2421833cdbdfad7",
+    "config/jobs.yaml": "fa7eef39f716a3d406fe28dcdb0db73cc40ae003525b650b742d9504ac83b3fe",
     "config/models.lock.yaml": "9352df66f7c0bade042cbf09bd429ab398d4c172fc0d9506c98fea0b8820a0f3",
     "config/models.yaml": "220dba02ace4d22748b834b2548869c36730a6ed23ce713ad82ca390aa849fd6",
+    "config/prompts/contam_completion_system.txt": "3a4403b8d403bcf9c9947156a08b3e1c20d4ca9b3bb841fed964c9456dd3faa3",
+    "config/prompts/contam_general_user.txt": "1fc8e11b3ff51ec0cbf79482f235af2fa7ac29eca7c16d1afc013129367e582c",
+    "config/prompts/contam_guided_user.txt": "7ea823ac2a8769691c14ca0cc03321acd430564af6571fc5289204ebadc2081f",
+    "config/prompts/contam_id_user.txt": "ddbb5db48aa30f20ae43f9266e8e4c257af6cec33dfcb5f687b74d08be85767f",
+    "config/prompts/contam_noid_user.txt": "30e5785c03d542d44eebef81107782975de4c30016313a148f50ae6541fd9f46",
     "config/prompts/posterior_system_case.txt": "86ad3e27eacfc8c221352b59f5c98732d948c94b1648ad488627207c78644371",
     "config/prompts/posterior_system_fixed.txt": "9e2233b8053efb3f9cbbd0a7844e5c8155ea5879d0817ca4c6c26bb06c83ed1f",
     "config/prompts/prep_mcr_extract_system.txt": "5f2ab0595abb87743632258d6aaa51b4e468831096d52959f05ff021468ec888",
@@ -39,8 +44,8 @@
     "frozen/medcase/prepared.jsonl": "11bcbeca3aa9d2625833041db2a9323bef84e92fb10b2d9363fb2ba9ad2fe7eb"
   },
   "previous": {
-    "created_at": "2026-11-17T15:52:58-05:00",
-    "sha256": "a063648c16c0e41b09ba13d6c774a4acc30f14ad53e76ecc0bf0c32d7572d6b8",
-    "file": "freeze_history/FREEZE-20261117T155258.json"
+    "created_at": "2026-11-23T17:47:22-05:00",
+    "sha256": "ea6f2a247fb903cebdf9034553cf4aa14dde1011c336be2ef16954d62dc39200",
+    "file": "freeze_history/FREEZE-20261123T174722.json"
   }
 }

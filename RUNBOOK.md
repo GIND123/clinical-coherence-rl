@@ -314,6 +314,42 @@ Without push access, zip `config/models.lock.yaml` and the whole
 
 ---
 
+## 8b. Amendment 2: temperature 0 at full scale and a contamination probe (≈ $66, before 18 Dec)
+
+Design and reasons: docs/amendment_2.md. Expected cost is about $66 and the worst case about
+$244. This is well inside the remaining hard-cap headroom.
+
+```bash
+cd clinical-coherence-rl && source .venv/bin/activate
+git pull
+ccrl freeze --check            # must print OK (39 files, frozen 2026-11-26...)
+ccrl status                    # committed about $561.55
+ccrl plan | grep temp0_        # temp0_panel ~$17, temp0_ext ~$9 expected
+ccrl contamination plan        # ~$40 expected (Kimi K3 is most of it)
+bash scripts/run_detached.sh queue temp0_panel temp0_ext       # ~45,000 cheap calls, a few hours
+```
+
+When the log shows the queue has finished:
+
+```bash
+bash scripts/run_detached.sh contamination run                 # 7,200 calls, mostly waiting on Kimi K3
+```
+
+When both have finished, pack and send the archive as before:
+
+```bash
+ccrl status
+ccrl export && ccrl archive pack
+```
+
+Upload the newest `runs/archive/*.tar.gz` and its `.sha256` to the shared folder.
+
+- **Do not add `temp0` to the queue.** Its 900 Kimi K3 requests can never run, because Bedrock
+  rejects temperature for Kimi K3.
+- **If anything stops,** rerun the same command. Finished calls are never sent again.
+
+---
+
 ## 9. Optional: partner models (only if AWS enables them)
 
 ```bash

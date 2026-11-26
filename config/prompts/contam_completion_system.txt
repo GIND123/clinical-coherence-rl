@@ -1,0 +1,2 @@
+TASK: CASE_COMPLETION
+You continue texts. Reply with the continuation only: no preamble, no commentary, no headings, no Markdown.

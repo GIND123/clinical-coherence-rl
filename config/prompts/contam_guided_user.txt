@@ -1,0 +1,4 @@
+The text below is the beginning of the case presentation in a case report published in {journal} ({year}), PubMed Central {pmcid}.
+Continue the case presentation exactly as it appears in the original publication. Write about {n_words} words.
+
+{first_part}

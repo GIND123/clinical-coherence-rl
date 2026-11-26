@@ -68,6 +68,9 @@ class MockBedrock:
                 self._alt(it["base"], k) for k in range(3)]} for it in items]})
         elif "TASK: PROBE_PING" in system:
             text = "OK"
+        elif "TASK: CASE_COMPLETION" in system:
+            last = [s for s in _SENT.split(user_turns[-1]) if s.strip()][-1]
+            text = "The patient was observed closely. " + last + " Further tests followed over the next days."
         else:
             text = self._posterior(system, user_turns, model, rng)
         out_tokens = int(len(text) / 4) + 1

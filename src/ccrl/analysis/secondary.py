@@ -17,7 +17,8 @@ from ccrl.analysis import metrics as Mx
 from ccrl.util import two_letter_codes
 
 N_BOOT = 2000
-ARMS = ("temp0", "effort_arm")
+# arm -> the panel job it is compared with, case by case
+ARMS = {"temp0": "panel_main", "effort_arm": "panel_main", "temp0_panel": "panel_main", "temp0_ext": "panel_ext"}
 
 
 def _ci(x: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[float, float, float]:
@@ -64,9 +65,9 @@ def paired_vs_panel(post: pd.DataFrame, n_boot: int = N_BOOT, seed: int = 0) -> 
     excess order / paraphrase JS beyond its own retest JS (systematic part of the effect)."""
     rng = np.random.default_rng(seed)
     p = _single(post)
-    ref_all = p[p["job"] == "panel_main"]
     out = []
-    for job in ARMS:
+    for job, ref_job in ARMS.items():
+        ref_all = p[p["job"] == ref_job]
         a = p[p["job"] == job]
         for (mk, ds, eff), g in a.groupby(["model_key", "dataset", "effort"]):
             ref = per_case(ref_all[(ref_all["model_key"] == mk) & (ref_all["dataset"] == ds)])

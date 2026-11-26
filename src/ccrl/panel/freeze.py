@@ -56,8 +56,16 @@ def freeze(ws: Workspace) -> dict:
     files = covered_files(ws)
     if not any(k.startswith("frozen/items/") for k in files):
         raise SystemExit("No built items to freeze: run `ccrl build items` first.")
-    doc = {"created_at": now_iso(), "git_commit": git_commit(), "dry_run": ws.dry_run,
-           "files": {k: sha256_file(p) for k, p in sorted(files.items())}}
+    prev_files = read_json(ws.freeze_file).get("files", {}) if ws.freeze_file.exists() else {}
+    hashes = {}
+    for k, p in sorted(files.items()):
+        h = sha256_file(p)
+        # same content, other line endings (CSV written on another OS): keep the recorded hash,
+        # so a re-freeze lists only real changes
+        if k in prev_files and prev_files[k] != h and prev_files[k] in _eol_variants(p):
+            h = prev_files[k]
+        hashes[k] = h
+    doc = {"created_at": now_iso(), "git_commit": git_commit(), "dry_run": ws.dry_run, "files": hashes}
     if ws.freeze_file.exists():
         # A re-freeze (an OSF amendment) must not erase the record the earlier
         # jobs ran under: keep every previous freeze, named by its own date.

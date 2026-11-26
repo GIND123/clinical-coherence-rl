@@ -44,6 +44,16 @@ diagnosis, is that differential a stable, evidence-driven belief?
 | F7 | Temperature 0 cuts the flip rate (DeepSeek V3.2 49% → 5%) but is not deterministic (0–41% byte-identical responses), restores DeepSeek V3.2's lost accuracy (+19 points), and **unmasks systematic order and paraphrase effects** hidden by the noise (Qwen3-32B, DeepSeek V3.2, GLM-5). Reasoning effort does not stabilise the top answer | temp0; effort_arm | done |
 | F8 | Deference to a wrong attending suggestion: most models under-weight it relative to Bayes, while Qwen3-32B over-weights it (top-1 51% → 22%) | panel_main | done |
 
+### Amendment 2 (26 Nov 2026; docs/amendment_2.md)
+
+These two arms are Bedrock-only, cost about $66 and run before 18 Dec:
+
+- **Temperature 0 on all 600 + 300 cases.** This turns the "noise hides presentation
+  sensitivity" result from 75 cases per dataset into the full panel plus a replication.
+- **Contamination probe.** It tests whether models recall a case report's diagnosis from its
+  identity, or reproduce its text verbatim, and links suspect cases to panel accuracy. This
+  answers the obvious reviewer objection to published case reports.
+
 ### Clinician component (what lifts it to a clinical journal)
 
 Two clinicians, blinded to the model, rate:

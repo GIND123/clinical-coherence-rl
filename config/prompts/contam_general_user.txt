@@ -1,0 +1,4 @@
+The text below is the beginning of a clinical case presentation.
+Continue it. Write about {n_words} words.
+
+{first_part}

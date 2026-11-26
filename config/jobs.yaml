@@ -99,3 +99,32 @@ jobs:
     models: panel
     efforts: [default]
     requires_completed: [panel_main]
+
+  # ------------------------------------------------------------------------
+  # Amendment 2 (2026-11-26, after the secondary arms; docs/amendment_2.md).
+  # temp0 on the core 150 cases showed that removing most sampling noise
+  # unmasks systematic order/paraphrase effects. These two arms test that on
+  # the full confirmatory panel and on the replication sample. Kimi K3 is not
+  # included: Bedrock rejects the temperature field for it.
+  # The contamination probe (ccrl contamination run) is the third Amendment 2
+  # arm; it is not an item-based job and is defined in ccrl/panel/contamination.py.
+  # ------------------------------------------------------------------------
+  temp0_panel:
+    priority: B
+    description: temperature 0 on the full panel - 600 cases x 10 calls x 5 models (Kimi K3 rejects temperature)
+    item_set: panel
+    transform_set: all10
+    models: [glm-5, deepseek-v3.2, qwen3-next-80b, gpt-oss-120b, qwen3-32b]
+    efforts: [default]
+    temperature: 0.0
+    requires_completed: [panel_main]
+
+  temp0_ext:
+    priority: B
+    description: temperature 0 on the replication sample - 300 DDXPlus cases x 10 calls x 5 models
+    item_set: panel_ext
+    transform_set: all10
+    models: [glm-5, deepseek-v3.2, qwen3-next-80b, gpt-oss-120b, qwen3-32b]
+    efforts: [default]
+    temperature: 0.0
+    requires_completed: [panel_ext]
