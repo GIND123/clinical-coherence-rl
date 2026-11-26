@@ -213,3 +213,75 @@ def test_confirm_flex_manual(tmp_runs, monkeypatch):
         assert led.committed() < 300
     finally:
         led.close()
+
+
+def test_finalize_keeps_panel_file_and_splits_training(tmp_runs, monkeypatch):
+    """Adding training-split extractions must never change the frozen prepared.jsonl."""
+    from ccrl.prep import medcase
+    from ccrl.workspace import Workspace
+
+    ws = Workspace(dry_run=True)
+    sel = ([{"case_id": f"p{i}", "role": "panel", "prep_order": i} for i in range(3)]
+           + [{"case_id": f"t{i}", "role": "train", "prep_order": i} for i in range(5)])
+    monkeypatch.setattr(medcase, "role_spec", lambda ws, role: (role, None))
+    monkeypatch.setattr(medcase, "selected", lambda roles=None: sel)
+    monkeypatch.setattr(medcase, "finalize_case", lambda s, e, v, seed, k: {
+        "case_id": s["case_id"], "role": s["role"], "status": "rejected" if s["case_id"] == "t1" else "ok",
+        "reject_reasons": [], "candidates": [], "findings": [], "gold": "AA"})
+    study = dict(config.study())
+    study["medcase"] = {**study["medcase"], "train_cases": 2}
+    monkeypatch.setattr(medcase.config, "study", lambda: study)
+
+    monkeypatch.setattr(medcase, "outputs", lambda ws, job, key: {s["case_id"]: {} for s in sel
+                                                                    if s["role"] == "panel"})
+    medcase.finalize(ws)
+    before = ws.mcr_prepared.read_bytes()
+    assert not ws.mcr_prepared_train.exists()
+
+    monkeypatch.setattr(medcase, "outputs", lambda ws, job, key: {s["case_id"]: {} for s in sel})
+    medcase.finalize(ws)
+    assert ws.mcr_prepared.read_bytes() == before           # panel file byte-identical
+    train = [json.loads(x) for x in ws.mcr_prepared_train.read_text().splitlines()]
+    assert [r["status"] for r in train] == ["ok", "rejected", "ok", "reserve", "reserve"]
+
+
+def test_freeze_check_ignores_line_endings_only(tmp_path):
+    from ccrl.panel.freeze import _eol_variants
+    import hashlib
+
+    p = tmp_path / "a.csv"
+    p.write_bytes(b"x,y\n1,2\n")
+    assert hashlib.sha256(b"x,y\r\n1,2\r\n").hexdigest() in _eol_variants(p)
+    assert hashlib.sha256(b"x,y\n1,3\n").hexdigest() not in _eol_variants(p)
+
+
+def test_secondary_paired_and_sequential_gap():
+    from ccrl.analysis import secondary as Sec
+
+    rng = np.random.default_rng(1)
+    rows = []
+
+    def post(job, case, transform, probs, turn=1, gold="AA", effort="default"):
+        rows.append({"job": job, "model_key": "m", "dataset": "ddxplus", "effort": effort, "replicate": 0,
+                     "case_id": case, "transform": transform, "turn": turn, "parse_ok": True,
+                     "probs": list(probs), "gold": gold})
+
+    for i in range(40):
+        c = f"c{i}"
+        noisy = lambda: rng.dirichlet(np.ones(4))
+        for t in ("base", "retest", "perm1", "para", "cue"):
+            post("panel_main", c, t, noisy())                     # pure noise at default decoding
+        det = np.array([0.7, 0.1, 0.1, 0.1])
+        for t in ("base", "retest", "para", "cue"):
+            post("temp0", c, t, det)                              # deterministic ...
+        post("temp0", c, "perm1", np.array([0.1, 0.7, 0.1, 0.1]))  # ... but order-sensitive
+        post("sequential", c, "seqA", det, turn=2)
+        post("sequential", c, "seqB", np.array([0.1, 0.1, 0.7, 0.1]), turn=2)
+    P = pd.DataFrame(rows)
+    pv = Sec.paired_vs_panel(P, n_boot=200)
+    r = pv[pv["arm"] == "temp0"].iloc[0]
+    assert r["n_cases"] == 40 and r["flip_arm"] == 0.0 and r["d_flip"] < 0
+    assert r["top1_arm"] == 1.0
+    assert r["excess_order_arm_lo"] > 0.3                         # systematic effect unmasked
+    sg = Sec.sequential_gap(P, n_boot=200)
+    assert sg.iloc[0]["flip_AB"] == 1.0 and sg.iloc[0]["n_cases"] == 40

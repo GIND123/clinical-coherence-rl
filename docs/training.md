@@ -54,16 +54,20 @@ The training endpoints were amended before any training run
 
 `ccrl train compare` reports all of these per dataset.
 
-**Waiting on:** `artifacts/frozen/` from the panel machine (RUNBOOK §8.7).
-It holds three things:
+**Inputs: all in the repository (25 Nov 2026).**
 
 - the items, because evaluation runs on exactly the panel's items;
 - the phrase bank (`banks/ddx_phrasebank.json`), which the training
   sampler's paraphrase transform uses;
-- the prepared MedCaseReasoning cases.
+- `medcase/prepared_train.jsonl`: 2,000 MedCaseReasoning training cases for
+  the label-free arm (plus 134 reserve and 16 rejected; SHA-256 `1883e4f7…`).
+  It is separate from the panel's frozen `prepared.jsonl`, which is unchanged;
+- the panel answers for H6 (`posteriors.parquet`), from the PI's verified
+  archive (`ccrl-archive-20261125-144504.tar.gz`; not committed, ~775 MB).
 
-Until it arrives, `ccrl train build-pool`, `ccrl train reward-suite` and the
-CPU smoke tests can run.
+Panel reference values the trained models must beat are in
+docs/results_panel_main.md and docs/results_secondary.md. Temperature 0 is a
+measured baseline: it halves the flip rate for the noisiest panel models.
 
 ## Order of runs (decisive comparison first)
 

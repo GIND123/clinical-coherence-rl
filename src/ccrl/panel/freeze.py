@@ -77,13 +77,26 @@ def freeze(ws: Workspace) -> dict:
     return doc
 
 
+def _eol_variants(p: Path) -> set[str]:
+    import hashlib
+
+    b = p.read_bytes()
+    lf = b.replace(b"\r\n", b"\n")
+    return {hashlib.sha256(lf).hexdigest(), hashlib.sha256(lf.replace(b"\n", b"\r\n")).hexdigest()}
+
+
 def check_freeze(ws: Workspace) -> tuple[bool, str]:
     if not ws.freeze_file.exists():
         return False, f"no freeze file at {ws.freeze_file}"
     doc = read_json(ws.freeze_file)
     want = doc["files"]
     have = {k: sha256_file(p) for k, p in covered_files(ws).items()}
-    changed = sorted(k for k in want if k in have and have[k] != want[k])
+    files = covered_files(ws)
+    # CSV files are written with CRLF (csv module) but git checks them out with LF
+    # (.gitattributes eol=lf), so a fresh clone differs from the freezing machine
+    # only in line endings. Accept that, and nothing else.
+    changed = sorted(k for k in want if k in have and have[k] != want[k]
+                     and want[k] not in _eol_variants(files[k]))
     missing = sorted(k for k in want if k not in have)
     added = sorted(k for k in have if k not in want)
     if changed or missing or added:

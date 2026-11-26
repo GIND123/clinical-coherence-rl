@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ccrl.analysis import secondary
 from ccrl.analysis.estimands import analyze
 from ccrl.analysis.stability import reliability, updating
 from ccrl.archive.export import posterior_table
@@ -64,6 +65,20 @@ def run(ws: Workspace, jobs: list[str] | None = None, n_boot: int = 2000) -> Pat
         upd.to_csv(out / "updating.csv", index=False)
         lines += ["", "## Evidence updating on mean posteriors (resample arm)", "",
                   upd.round(4).to_string(index=False)]
+    pv = secondary.paired_vs_panel(post, n_boot=n_boot)
+    if not pv.empty:
+        pv.to_csv(out / "paired_vs_panel.csv", index=False)
+        pc_cols = ["arm", "model_key", "dataset", "n_cases", "flip_panel", "flip_arm", "d_flip", "d_flip_lo",
+                   "d_flip_hi", "top1_panel", "top1_arm", "d_top1", "d_top1_lo", "d_top1_hi",
+                   "excess_order_panel", "excess_order_arm", "excess_order_arm_lo", "excess_order_arm_hi"]
+        lines += ["", "## Secondary arms vs the main panel on the same cases", "",
+                  "excess_order: JS(base, perm1) - JS(base, retest), the order effect beyond the "
+                  "condition's own noise (bits).", "", pv[pc_cols].round(3).to_string(index=False)]
+    sg = secondary.sequential_gap(post, n_boot=n_boot)
+    if not sg.empty:
+        sg.to_csv(out / "sequential_gap.csv", index=False)
+        lines += ["", "## Sequential evidence: order gap beyond the one-shot retest floor", "",
+                  sg.round(3).to_string(index=False)]
     (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     _figures(E, out)
     return out

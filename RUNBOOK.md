@@ -210,6 +210,10 @@ sleeps, the network drops, or you stop it, run the same command again.
 
 ## 8. After the main panel: secondary arms (≈1–2 days of mostly waiting, ≈$377)
 
+> **Done 24–25 Nov 2026** ($560.02 in total; docs/results_secondary.md). The training cases were
+> finalised from the archive on the analysis machine (`medcase/prepared_train.jsonl`). Do not run
+> `ccrl prep finalize` on the panel machine.
+
 **8.1 Update (2 min, $0).** Your local edits to `config/budget.yaml` (raised
 caps) and `config/prices.yaml` (verified prices) are already in the repo
 version. Discard them, then pull:

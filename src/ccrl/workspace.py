@@ -48,6 +48,12 @@ class Workspace:
         return self.mcr_dir / "prepared.jsonl"
 
     @property
+    def mcr_prepared_train(self) -> Path:
+        """Training-split cases (label-free arm). Kept out of prepared.jsonl so
+        that adding them never changes a file the panel freeze covers."""
+        return self.mcr_dir / "prepared_train.jsonl"
+
+    @property
     def ledger(self) -> Path:
         return self.runs / "ledger.sqlite"
 

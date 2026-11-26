@@ -90,21 +90,22 @@ Kimi K3 is 95% of the panel cost. The main panel came in above the pre-pilot
 "high" forecast ($182), because Kimi K3 writes about 3,700 tokens of
 reasoning per answer, against the 2,500 assumed.
 
-## Remaining (forecast from measured per-call costs)
+## Secondary arms and training extraction (24–25 Nov 2026): $319.66
 
-| job | calls | expected |
+| job | requests | reported cost |
 |---|---|---|
-| effort_arm | 2,700 | $2 |
-| temp0 (amendment 1) | 5,400 | $30 |
-| sequential | 3,600 | $20 |
-| resample (amendment 1) | 10,800 | $50 |
-| distill | 2,000 | $51 |
-| panel_ext | 18,000 | $84 |
-| MedCaseReasoning training extraction | 2,150 | $140 |
-| **total remaining** | **44,650** | **≈ $377** |
+| panel_ext | 18,000 | $84.64 |
+| resample | 10,800 | $47.44 |
+| distill | 2,000 | $46.82 |
+| sequential | 3,600 | $12.68 |
+| effort_arm | 2,700 | $1.86 |
+| temp0 (no Kimi K3: Bedrock rejects temperature) | 4,500 | $1.59 |
+| MedCaseReasoning training extraction | 2,150 | ≈ $124 |
 
-**Projected total ≈ $617 of $1,100**, leaving about $480 of credit unused.
-That reserve covers re-runs and the optional partner arm.
+**Study total: $560.02 reported** ($561.55 counted by the guard, which includes
+calls with uncertain billing). Flex billing was confirmed on 24 Nov from the
+AWS Credits page ($237.64 vs $240.36 in the ledger). About $540 of credit
+remains until 31 Dec 2026; nothing planned needs it.
 
 ## Caps (enforced on every call)
 
@@ -129,7 +130,7 @@ about $760 of real spend.
 
 ## Headroom
 
-About $480 of credit stays unused after everything planned. It is held, in
+About $540 of credit is unused after every planned run. It is held, in
 this order, for:
 
 1. Real token counts exceeding the forecast (Kimi K3 already did once).
@@ -137,4 +138,4 @@ this order, for:
 3. The optional `partner_panel`, if AWS enables partner models in time to
    finish by 18 Dec (about 2 days of running).
 
-Additions after the main panel are filed as OSF amendments before they run (docs/osf_amendment_1.md).
+Additions after the main panel are documented in docs/osf_amendment_1.md.

@@ -2,7 +2,8 @@
 
     ccrl prep mcr --stage extract [--roles pilot,panel]   preprocessor model
     ccrl prep mcr --stage verify                          verifier model (pilot + panel only)
-    ccrl prep finalize                                    deterministic -> medcase/prepared.jsonl
+    ccrl prep finalize                                    deterministic -> medcase/prepared.jsonl (pilot, panel)
+                                                          and medcase/prepared_train.jsonl (training split)
 
 Finalisation rules (all deterministic, applied before any panel model is
 called, so case inclusion can never depend on a panel answer):
@@ -235,7 +236,23 @@ def finalize(ws: Workspace) -> dict | None:
         else:
             rec = finalize_case(sel, e, v, seed, k if needs_ver else 6)
         out.append(rec)
-    write_jsonl(ws.mcr_prepared, out)
+    # Pilot/panel rows -> prepared.jsonl (covered by the freeze; byte-identical however
+    # many training cases exist). Training rows -> prepared_train.jsonl: the first
+    # `train_cases` ok rows in the frozen preprocessing order are used, later ok rows
+    # are marked "reserve" (same rule as the panel's "first 300 that pass").
+    panel_rows = [r for r in out if r["role"] in ("pilot", "panel")]
+    train_rows = [r for r in out if r["role"] == "train"]
+    if panel_rows:
+        write_jsonl(ws.mcr_prepared, panel_rows)
+    if train_rows:
+        cap = int(config.study()["medcase"]["train_cases"])
+        n_ok = 0
+        for r in train_rows:
+            if r["status"] == "ok":
+                n_ok += 1
+                if n_ok > cap:
+                    r["status"] = "reserve"
+        write_jsonl(ws.mcr_prepared_train, train_rows)
     # clinician-review export (pilot + panel)
     with open(ws.mcr_dir / "medcase_review.csv", "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)

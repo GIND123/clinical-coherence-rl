@@ -1,11 +1,14 @@
 # Pre-registration (OSF draft)
 
-*Register on OSF (osf.io → "OSF Preregistration" template) **after**
-`ccrl freeze` and **before** `ccrl run panel_main`. Paste the freeze hash:
-`shasum -a 256 artifacts/frozen/FREEZE.json` →* `__________`
+*Public in the repository since 6 Nov 2026 (commit `a276032`), before any data collection.
+Main-panel freeze (17 Nov 2026, the design the pilot and main panel ran under):*
+`a063648c16c0e41b09ba13d6c774a4acc30f14ad53e76ecc0bf0c32d7572d6b8`
+*(`artifacts/frozen/freeze_history/FREEZE-20261117T155258.json`).*
 
-> **Amendment 1 (drafted 18 Nov 2026; to be filed after the main panel and before any secondary
-> arm or training run):** [osf_amendment_1.md](osf_amendment_1.md).
+> **OSF status (25 Nov 2026).** Not filed on OSF before data collection. The pilot and main panel
+> (17–18 Nov) and the secondary arms (24–25 Nov) have been collected and analysed. Any OSF filing
+> must state this; only the training hypotheses can still be registered prospectively.
+> **Amendment 1:** [osf_amendment_1.md](osf_amendment_1.md).
 
 ## 1. Title
 Coherence as a Reward: Label-Free Reinforcement Learning for Rational Belief

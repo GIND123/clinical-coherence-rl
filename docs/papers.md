@@ -1,8 +1,9 @@
 # Two papers from one study
 
-*18 Nov 2026, after the main panel. This replaces the single-paper framing
-of `problem_statement.md` §3: the grant needs two papers. Results so far:
-[results_panel_main.md](results_panel_main.md).*
+*18 Nov 2026, after the main panel; updated 25 Nov 2026 after the secondary arms. This replaces
+the single-paper framing of `problem_statement.md` §3: the grant needs two papers. Results:
+[results_panel_main.md](results_panel_main.md) and [results_secondary.md](results_secondary.md).
+All Bedrock runs are finished ($560 of the $1,100 credit).*
 
 One Bedrock run and one item set feed both papers:
 
@@ -18,8 +19,10 @@ They cite each other but make disjoint claims. Paper 1 is preprinted first.
 ## Paper 1 — clinical evaluation
 
 **Working title.** *Same patient, same question, different diagnosis:
-run-to-run instability, not presentation, limits open-weight language models
-as diagnosticians.*
+run-to-run instability and hidden presentation sensitivity in open-weight
+language models as diagnosticians.* (The earlier "instability, not
+presentation" no longer holds: at temperature 0, presentation effects appear;
+docs/results_secondary.md §3.)
 
 **Targets.** npj Digital Medicine; JAMIA; Lancet Digital Health. Backup: JBI,
 JAMIA Open.
@@ -34,11 +37,11 @@ diagnosis, is that differential a stable, evidence-driven belief?
 |---|---|---|---|
 | F1 | Accuracy on synthetic and real cases spans 51–84% and 24–61% top-1; calibration is poor (ECE 0.07–0.53) | panel_main | done |
 | F2 | Asked the identical question twice, models change their leading diagnosis in 9–43% of cases | panel_main (retest) | done |
-| F3 | Beyond that noise, order, duplication, paraphrase and irrelevant sentences add little (≤ 0.09 of a different patient; most CIs include 0) | panel_main; replicated on 300 new DDXPlus cases | panel_ext pending |
+| F3 | At provider defaults, order, duplication, paraphrase and irrelevant sentences add little beyond that noise (≤ 0.09 of a different patient; most CIs include 0) | panel_main; panel_ext (300 new cases) | done; replicates |
 | F4 | The noise costs accuracy: averaging equivalent answers gains up to 12.8 points top-1; 4–24% of Brier error is variance | panel_main | done |
 | F5 | "Ask twice" is a usable alarm. When two identical queries disagree, the first answer is wrong 55–86% of the time (vs 12–72% when they agree), and disagreement catches 17–71% of errors. For the noisier models it beats stated confidence (AUROC +0.20) | panel_main | done |
-| F6 | Do models update on evidence once the noise is averaged out? Direction and size of the mean update after removing one finding, against the tempered-Bayes reference; half-evidence vs full-evidence posteriors | resample; sequential | pending |
-| F7 | Does deterministic decoding remove the instability, and does it reveal systematic presentation effects hidden by noise? Does more reasoning effort reduce instability? | temp0; effort_arm | pending |
+| F6 | Even with the noise averaged out (5 vs 4 answers per case), removing an informative finding moves the gold diagnosis detectably in only 11–24% of cases, in the right direction in 49–60%, uncorrelated with the Bayes reference. Reversing the order of two evidence halves changes the final top diagnosis in 8–44% of cases | resample; sequential | done |
+| F7 | Temperature 0 cuts the flip rate (DeepSeek V3.2 49% → 5%) but is not deterministic (0–41% byte-identical responses), restores DeepSeek V3.2's lost accuracy (+19 points), and **unmasks systematic order and paraphrase effects** hidden by the noise (Qwen3-32B, DeepSeek V3.2, GLM-5). Reasoning effort does not stabilise the top answer | temp0; effort_arm | done |
 | F8 | Deference to a wrong attending suggestion: most models under-weight it relative to Bayes, while Qwen3-32B over-weights it (top-1 51% → 22%) | panel_main | done |
 
 ### Clinician component (what lifts it to a clinical journal)
@@ -140,30 +143,21 @@ current transformers loop (docs/training.md). The decisive pair first:
 
 ---
 
-## What runs on Bedrock next (all within the credit)
+## Bedrock: finished
 
-At measured per-call costs:
-
-| job | for | calls | expected cost |
-|---|---|---|---|
-| effort_arm | P1 F7 | 2,700 | ~$2 |
-| sequential | P1 F6 | 3,600 | ~$20 |
-| temp0 *(amendment 1)* | P1 F7, P2 baseline | 5,400 | ~$30 |
-| resample *(amendment 1)* | P1 F6 | 10,800 | ~$50 |
-| panel_ext | P1 F3 replication | 18,000 | ~$84 |
-| distill | P2 baseline | 2,000 | ~$51 |
-| MedCaseReasoning training extraction | P2 H5 | 2,150 | ~$140 |
-| **total** | | **44,650** | **~$377** |
-
-That brings total real spend to about $617 of the $1,100 credit.
+Every arm ran on 24–25 Nov 2026 (docs/results_secondary.md), except `temp0` on Kimi K3, which
+Bedrock does not allow at temperature 0. Total reported spend: $560.02. About $540 of credit
+remains until 31 Dec 2026, with paid calls possible until 18 Dec. It is not needed for either
+paper; it is held for a reviewer-requested arm, should one come up in time.
 
 ## Timeline
 
 | when | who | what |
 |---|---|---|
-| this week | PI | `git pull`; confirm Flex billing; file OSF amendment 1; re-freeze; run the jobs above (~2 days of Kimi time); push `artifacts/frozen/` and `models.lock.yaml` |
-| from now | training side | base-model evaluation on the frozen items as soon as they are pushed; the decisive 4B pair |
-| by 18 Dec | PI | archive (`ccrl export`, `ccrl archive pack`) to Zenodo |
+| done | PI | all Bedrock runs; frozen inputs pushed; archive verified |
+| now | training side | base-model evaluation on the frozen items; the decisive 4B pair (`rlvr` vs `ccr_acc_fid`) |
+| when ready | team | OSF: Paper 2 training hypotheses before training; Paper 1 as a transparent post-collection registration |
 | Dec–Jan | clinicians | ratings (a)–(c) |
+| before 18 Dec | PI | Zenodo deposit of the archive |
 | late Jan 2027 | team | Paper 1 preprint and submission |
 | by 31 Mar 2027 | team | Paper 2 submission (TNNLS) |

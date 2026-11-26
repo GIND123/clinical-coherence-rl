@@ -176,14 +176,17 @@ Pilot gates (RUNBOOK §6) all passed:
 - no refusals or truncations;
 - retry-free in 98.3% of attempts.
 
-## 7. What is still missing for the papers
+## 7. Follow-up
 
-1. The secondary arms: `effort_arm`, `sequential`, `panel_ext` and
-   `distill`, plus Amendment 1's `temp0` and `resample`.
-2. The MedCaseReasoning training extraction, needed for the label-free
-   training arm.
-3. The frozen inputs (`artifacts/frozen/`) and `config/models.lock.yaml`
-   committed to the repository. The local training evaluation needs the same
-   items, and the reanalysis needs the item metadata.
-4. Clinician review: the cue bank and paraphrases; a rating of whether
-   retest flips are clinically meaningful (docs/papers.md).
+Done since (25 Nov 2026), in [results_secondary.md](results_secondary.md):
+
+- the secondary arms, replication and Amendment 1's `temp0` and `resample`;
+- the training extraction;
+- the frozen inputs, committed to the repository.
+
+One result there changes how §1 should be read. At temperature 0, the noise falls and
+systematic order and paraphrase effects appear. NOE ≈ 0 at provider defaults therefore means
+"hidden by noise", not "invariant".
+
+Still open: clinician review of the cue bank and paraphrases, and a rating of whether retest
+flips are clinically meaningful (docs/papers.md).

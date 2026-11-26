@@ -100,7 +100,8 @@ class PairedSampler:
             kb = dx.load_kb()
             self.system = T.system_prompt("posterior", kb.candidates(), fixed=True)
         else:
-            rows = read_jsonl(paths.FROZEN_MCR / "prepared.jsonl")
+            src = paths.FROZEN_MCR / "prepared_train.jsonl"
+            rows = read_jsonl(src if src.exists() else paths.FROZEN_MCR / "prepared.jsonl")
             self.records = [r for r in rows if r.get("role") == "train" and r.get("status") == "ok"]
             self.make = mcr_prepared
             self.lik = None

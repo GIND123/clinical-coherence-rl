@@ -1,9 +1,14 @@
-# OSF amendment 1 (draft, 18 Nov 2026)
+# OSF amendment 1 (written 18 Nov 2026; public in the repository since commit 3e17eb5)
 
-*File this on OSF **before** running `temp0` or `resample` and before any
-training run. Attach the new freeze hash after re-freezing:
-`shasum -a 256 artifacts/frozen/FREEZE.json` →* `ea6f2a247fb903cebdf9034553cf4aa14dde1011c336be2ef16954d62dc39200`
-*The previous freeze file is kept in `artifacts/frozen/freeze_history/`.*
+*Freeze hash of the design these arms ran under:* `ea6f2a247fb903cebdf9034553cf4aa14dde1011c336be2ef16954d62dc39200`
+*(the main panel's freeze, `a063648c…`, is kept in `artifacts/frozen/freeze_history/`).*
+
+> **Timing, stated plainly (25 Nov 2026).** This amendment was written on 18 Nov 2026 and
+> committed to the public repository the same day, before any of the arms in §3 ran. It was
+> **not** filed on OSF before those arms ran: the secondary arms were collected on 24–25 Nov 2026
+> and analysed on 25 Nov 2026 (docs/results_secondary.md). Any OSF filing of this document must
+> say so. Sections 1–2 describe the state on 18 Nov. The training hypotheses (§4) remain
+> prospective: no training run has started.
 
 ## 1. Status at the time of the amendment
 
@@ -105,6 +110,6 @@ These are made before any training run.
 
 ## 6. Budget
 
-At measured per-call costs, the two new arms cost about $80. Total expected
-real spend is about $617 of the $1,100 credit, under the harness hard cap of
-$1,000.
+Forecast on 18 Nov: the two new arms about $80, total about $617. Actual (25 Nov): the two new
+arms cost $49.03 (`temp0` $1.59 without Kimi K3, which rejects temperature 0; `resample` $47.44);
+the whole study $560.02 reported, of the $1,100 credit.
