@@ -34,7 +34,7 @@ more coherent than much larger ones.
 | **All Bedrock runs**: pilot, main panel (600 cases × 10 calls × 6 models), replication (300 new cases), `temp0`, `resample`, `sequential`, `effort_arm`, `distill`, training extraction | **done** on the PI's account ($560.02 of $1,100); archive verified; results in [docs/results_panel_main.md](docs/results_panel_main.md) and [docs/results_secondary.md](docs/results_secondary.md) |
 | Plan | **two papers** ([docs/papers.md](docs/papers.md)): a clinical evaluation of open-weight models, and the coherence-reward method |
 | Frozen inputs (`artifacts/frozen/`, `models.lock.yaml`) and 2,000 MedCaseReasoning training cases | in the repository |
-| OSF | not yet filed; status stated in [docs/preregistration.md](docs/preregistration.md) and [docs/osf_amendment_1.md](docs/osf_amendment_1.md) |
+| OSF | **training study (Paper 2) registered 26 Nov 2026, before any training: [osf.io/4xmq7](https://osf.io/4xmq7)**. The Bedrock panel was not registered before collection (stated in [docs/preregistration.md](docs/preregistration.md)) |
 | Reward and synthetic-policy suite (Propositions 2 and 4) | done; 10/10 criteria pass |
 | Trainer, baselines, local evaluation, trained-vs-panel comparison | code done; CPU smoke-tested; GPU runs pending |
 | Tests | `python -m pytest -q` (CPU, ~3 min) |

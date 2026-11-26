@@ -40,6 +40,9 @@ early if M falls > 30 % below its first-5-step mean (collapse safeguard).
 
 ## Endpoints after amendment 1
 
+**Registered on OSF on 26 Nov 2026, before any training run: https://osf.io/4xmq7.** Any change to the reward,
+configs or endpoints from here on needs a dated OSF update *before* the affected runs.
+
 The main panel showed that run-to-run noise dominates (docs/results_panel_main.md).
 The training endpoints were amended before any training run
 (docs/osf_amendment_1.md):

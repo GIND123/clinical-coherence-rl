@@ -9,6 +9,8 @@
 > and analysed on 25 Nov 2026 (docs/results_secondary.md). Any OSF filing of this document must
 > say so. Sections 1–2 describe the state on 18 Nov. The training hypotheses (§4) remain
 > prospective: no training run has started.
+>
+> **26 Nov 2026:** §4 (training hypotheses) registered on OSF before any training run: https://osf.io/4xmq7
 
 ## 1. Status at the time of the amendment
 

@@ -156,7 +156,7 @@ paper; it is held for a reviewer-requested arm, should one come up in time.
 |---|---|---|
 | done | PI | all Bedrock runs; frozen inputs pushed; archive verified |
 | now | training side | base-model evaluation on the frozen items; the decisive 4B pair (`rlvr` vs `ccr_acc_fid`) |
-| when ready | team | OSF: Paper 2 training hypotheses before training; Paper 1 as a transparent post-collection registration |
+| 26 Nov 2026 | team | **done:** Paper 2 training hypotheses registered on OSF before training (https://osf.io/4xmq7) |
 | Dec–Jan | clinicians | ratings (a)–(c) |
 | before 18 Dec | PI | Zenodo deposit of the archive |
 | late Jan 2027 | team | Paper 1 preprint and submission |

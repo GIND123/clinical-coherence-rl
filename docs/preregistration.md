@@ -8,6 +8,9 @@ Main-panel freeze (17 Nov 2026, the design the pilot and main panel ran under):*
 > **OSF status (25 Nov 2026).** Not filed on OSF before data collection. The pilot and main panel
 > (17–18 Nov) and the secondary arms (24–25 Nov) have been collected and analysed. Any OSF filing
 > must state this; only the training hypotheses can still be registered prospectively.
+>
+> **Training study (Paper 2) registered on OSF on 26 Nov 2026, before any training run:** https://osf.io/4xmq7
+> (H2–H7 as amended in Amendment 1; frozen inputs `ea6f2a24…`).
 > **Amendment 1:** [osf_amendment_1.md](osf_amendment_1.md).
 
 ## 1. Title
