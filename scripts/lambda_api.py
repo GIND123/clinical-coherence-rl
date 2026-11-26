@@ -30,6 +30,7 @@ def call(method: str, path: str, body: dict | None = None) -> dict:
                                  data=json.dumps(body).encode() if body is not None else None)
     req.add_header("Authorization", "Basic " + base64.b64encode(f"{key}:".encode()).decode())
     req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", "ccrl-lambda/1.0")     # Cloudflare rejects urllib's default agent (1010)
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             return json.loads(r.read() or b"{}")
