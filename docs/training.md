@@ -72,6 +72,44 @@ Panel reference values the trained models must beat are in
 docs/results_panel_main.md and docs/results_secondary.md. Temperature 0 is a
 measured baseline: it halves the flip rate for the noisiest panel models.
 
+## Running on Lambda (GPU)
+
+Rollouts and evaluation use **vLLM** (`--backend vllm`; `src/ccrl/train/vllm_backend.py`):
+
+- one engine holds the frozen base model;
+- the current LoRA policy is saved after every optimiser step and loaded as a fresh adapter;
+- prompts go in as the training tokenizer's token ids;
+- the engine's per-token log-probs feed the truncated importance-sampling correction
+  (`tis_cap: 2.0`). The mean weight is logged as `tis_w` and should stay close to 1.
+
+Training samples at temperature 1.0 and top-p 1.0, so the sampling distribution is the policy
+being optimised. Evaluation keeps the registered decoding (temperature 0.7, top-p 0.95, fixed
+seed per item), plus temperature 0 for the baseline. This engine choice was made before any
+training run. The method, reward and endpoints are unchanged.
+
+The account is shared, so everything we create is named `govind_llm`, and
+`scripts/lambda_api.py` refuses to touch any other instance.
+
+```bash
+# on this machine (key in the environment, never in a file)
+python scripts/lambda_api.py types                      # what has capacity now
+python scripts/lambda_api.py add-key ~/.ssh/govind_llm.pub
+python scripts/lambda_api.py launch gpu_1x_h100_pcie us-west-3
+python scripts/lambda_api.py list                       # IP once it is "active"
+
+# on the instance
+curl -fsSL https://raw.githubusercontent.com/GIND123/clinical-coherence-rl/main/scripts/lambda_setup.sh | bash
+bash scripts/lambda_smoke.sh 2>&1 | tee runs/env/smoke.log          # ~20 min: parse rate, sec/step, tis_w
+nohup bash scripts/lambda_decisive.sh > runs/env/decisive.log 2>&1 &
+
+# afterwards, here: copy runs/ back (rsync), then
+python scripts/lambda_api.py terminate --yes            # billing stops only when terminated
+```
+
+`tau_I` is measured, not chosen. It is the 95th percentile of the untrained model's retest JS on
+the pilot items (`ccrl train tau-i`). It is passed to every run with `--tau-i` and recorded in
+the run's `config.yaml`.
+
 ## Order of runs (decisive comparison first)
 
 1. `ccrl train reward-suite`: 10 PASS (CPU, seconds).

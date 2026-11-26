@@ -28,7 +28,11 @@ max_grad_norm: 1.0
 micro_batch_tokens: 16384
 micro_batch_max_samples: 8
 logprob_chunk: 2048
-generation: {max_new_tokens: 512, temperature: 1.0, top_p: 1.0, batch_size: 32}
+# backend: hf (transformers generate; CPU-testable) or vllm (`--backend vllm` on the GPU box).
+# vLLM: gpu_memory_utilization is the engine's share of the card; sleep frees it during the
+# backward pass (needed for 8B on 48 GB cards). tis_cap defaults to 2.0 with vllm.
+generation: {backend: hf, max_new_tokens: 512, temperature: 1.0, top_p: 1.0, batch_size: 32,
+             gpu_memory_utilization: 0.3, max_model_len: 4096, sleep: false}
 save_every: 25
 collapse_stop: true
 reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.10, delta_S: 0.234, m0: 0.459, c_fid: 3.0,

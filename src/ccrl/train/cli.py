@@ -17,12 +17,18 @@ def add_parser(sub) -> None:
     s.add_argument("--seed", type=int, default=0)
     s.add_argument("--steps", type=int, default=None)
     s.add_argument("--model", default=None)
+    s.add_argument("--backend", choices=["hf", "vllm"], default=None, help="rollout engine (default: config)")
+    s.add_argument("--tau-i", type=float, default=None, help="reward tau_I measured by `ccrl train tau-i`")
     s = t.add_parser("eval", help="evaluate a local model on the frozen panel items")
     s.add_argument("--model", required=True)
     s.add_argument("--adapter", default=None)
     s.add_argument("--name", required=True)
     s.add_argument("--set", default="panel")
     s.add_argument("--limit-cases", type=int, default=None)
+    s.add_argument("--backend", choices=["hf", "vllm"], default="hf")
+    s.add_argument("--temperature", type=float, default=0.7, help="0.7 = registered decoding; 0 = baseline")
+    s = t.add_parser("tau-i", help="reward constant tau_I from the base model's pilot evaluation")
+    s.add_argument("--eval", required=True, help="runs/local_eval/<name>.parquet of the untrained model, --set pilot")
     s = t.add_parser("compare", help="paired comparison of two evaluated models")
     s.add_argument("--ref", required=True)
     s.add_argument("--new", required=True)
@@ -48,6 +54,10 @@ def run(a: argparse.Namespace) -> int:
             over["steps"] = a.steps
         if a.model:
             over["model"] = a.model
+        if a.backend:
+            over["generation"] = {"backend": a.backend}
+        if a.tau_i is not None:
+            over["reward"] = {"tau_I": float(a.tau_i)}
         cfg = load_config(a.config, over)
         cfg["output_dir"] = cfg["output_dir"].format(name=cfg["name"], seed=a.seed)
         m = cfg.get("method", "grpo")
@@ -74,7 +84,14 @@ def run(a: argparse.Namespace) -> int:
         return 0
     if a.taction == "eval":
         from ccrl.train.evaluate import evaluate_local
-        print(evaluate_local(a.model, a.name, a.adapter, a.set, limit_cases=a.limit_cases))
+        print(evaluate_local(a.model, a.name, a.adapter, a.set, limit_cases=a.limit_cases, backend=a.backend,
+                             temperature=a.temperature, top_p=0.95 if a.temperature > 0 else 1.0))
+        return 0
+    if a.taction == "tau-i":
+        import json as _json
+
+        from ccrl.train.evaluate import tau_i_from_eval
+        print(_json.dumps(tau_i_from_eval(a.eval)))
         return 0
     if a.taction == "compare":
         from ccrl.train.evaluate import compare

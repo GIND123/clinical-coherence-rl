@@ -4,12 +4,11 @@
 
 One step:
   1. sample B patients; per patient a paired group of prompts (x: G, x': G, x-: H)
-  2. generate completions with the current LoRA policy (transformers `generate`;
-     thinking off, <= 512 new tokens — a posterior JSON). This backend is
-     CPU-testable and fits the plan's 10-14 GPU-h per 4B run. For more speed,
-     port the colocated vLLM loop (sleep/wake, frozen-weight parking, LoRA
-     hot-swap, truncated IS) from DEFER-Dx `training/grpo_vllm.py`; `Sample`
-     already carries `rollout_logprobs` and `pg_kl_loss` the TIS weight for it.
+  2. generate completions with the current LoRA policy (thinking off, <= 512 new
+     tokens — a posterior JSON). `generation.backend: hf` uses transformers
+     `generate` (CPU-testable, slow); `vllm` uses a colocated vLLM engine with the
+     policy hot-swapped as a LoRA adapter every step and truncated importance
+     sampling on the engine's token log-probs (ccrl/train/vllm_backend.py).
   3. parse each completion's stated posterior (same parser as the panel)
   4. rewards for the whole batch (ccrl.reward.coherence.batch_rewards):
      M and the sensitivity gate are batch-level; I, fidelity and accuracy per rollout
@@ -113,7 +112,7 @@ def pg_kl_loss(model, samples: list[Sample], pad_id: int, n_tok_total: int, kl_c
         with torch.no_grad(), model.disable_adapter():
             ref, _ = completion_logprobs_lowmem(model, samples, pad_id, chunk)
     total = 0.0
-    st = {"entropy_sum": 0.0, "kl_sum": 0.0}
+    st = {"entropy_sum": 0.0, "kl_sum": 0.0, "tis_w_sum": 0.0, "tis_n": 0.0}
     for k, (s, lp, ent) in enumerate(zip(samples, lps, ents)):
         adv = torch.as_tensor(float(s.advantage), dtype=lp.dtype, device=lp.device)
         ratio = torch.exp(lp - lp.detach())
@@ -122,6 +121,8 @@ def pg_kl_loss(model, samples: list[Sample], pad_id: int, n_tok_total: int, kl_c
             rl = torch.tensor(s.rollout_logprobs, dtype=lp.dtype, device=lp.device)
             ok = torch.isfinite(rl)
             w = torch.exp(torch.where(ok, lp.detach() - rl, torch.zeros_like(rl))).clamp(max=tis_cap)
+            st["tis_w_sum"] += float(w.sum())
+            st["tis_n"] += float(w.numel())
         term = -(ratio * adv) * w
         if ref is not None:
             d = ref[k] - lp
@@ -152,12 +153,34 @@ def train(cfg: dict[str, Any]) -> Path:
     sampler = PairedSampler(cfg.get("dataset", "ddxplus"), seed, cfg.get("transforms"),
                             cfg.get("contrast", "triage"), bool(cfg.get("label_free", False)),
                             cfg.get("pool_path"), cfg.get("phrasebank_path"))
+    gen_cfg = cfg.get("generation", {})
+    backend = gen_cfg.get("backend", "hf")
+    chat_kw = cfg.get("chat_template_kwargs", {"enable_thinking": False})
+    engine = None
+    if backend == "vllm":
+        # created before the training model, so vLLM reserves its share of GPU memory first
+        from transformers import AutoTokenizer
+
+        from ccrl.train.vllm_backend import VLLMEngine
+        eos = AutoTokenizer.from_pretrained(cfg["model"]).eos_token_id
+        engine = VLLMEngine(cfg["model"], max_new_tokens=int(gen_cfg.get("max_new_tokens", 512)),
+                            temperature=float(gen_cfg.get("temperature", 1.0)), top_p=float(gen_cfg.get("top_p", 1.0)),
+                            gpu_memory_utilization=float(gen_cfg.get("gpu_memory_utilization", 0.3)),
+                            max_model_len=int(gen_cfg.get("max_model_len", 4096)),
+                            lora_rank=int((cfg.get("lora") or {}).get("r", 32)),
+                            enable_sleep=bool(gen_cfg.get("sleep", False)), seed=seed,
+                            eos_token_ids=[eos] if eos is not None else None)
+    elif backend != "hf":
+        raise SystemExit(f"unknown generation.backend {backend!r} (hf | vllm)")
     model, tok = load_model_and_tokenizer(cfg, trainable=True)
     pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
-    gen_cfg = cfg.get("generation", {})
-    gen = HFGenerator(model, tok, int(gen_cfg.get("max_new_tokens", 512)), float(gen_cfg.get("temperature", 1.0)),
-                      float(gen_cfg.get("top_p", 1.0)), int(gen_cfg.get("batch_size", 32)),
-                      cfg.get("chat_template_kwargs", {"enable_thinking": False}))
+    if engine is not None:
+        from ccrl.train.vllm_backend import VLLMRolloutGenerator
+        gen = VLLMRolloutGenerator(engine, model, tok, out_dir / "rollout_adapter", chat_kw)
+    else:
+        gen = HFGenerator(model, tok, int(gen_cfg.get("max_new_tokens", 512)), float(gen_cfg.get("temperature", 1.0)),
+                          float(gen_cfg.get("top_p", 1.0)), int(gen_cfg.get("batch_size", 32)), chat_kw)
+    tis_cap = cfg.get("tis_cap", 2.0 if engine is not None else None)
     params = [p for p in model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=float(cfg.get("lr", 1e-5)), betas=(0.9, 0.99),
                             weight_decay=float(cfg.get("weight_decay", 0.0)))
@@ -187,7 +210,9 @@ def train(cfg: dict[str, Any]) -> Path:
                 for u in texts:
                     convs.append([{"role": "system", "content": gp.system}, {"role": "user", "content": u}])
                     index.append((gi, part))
+        tg = time.time()
         outs = gen(convs)
+        t_gen = time.time() - tg
         parsed: dict[tuple[int, str], list] = {}
         invalid = 0
         for (gi, part), (_p, _c, text, _lp) in zip(index, outs):
@@ -217,14 +242,14 @@ def train(cfg: dict[str, Any]) -> Path:
                 p_ids, c_ids, _t, lp = outs[row]
                 if c_ids:
                     samples.append(Sample(p_ids, c_ids, float(a), lp))
-        stats = {"entropy_sum": 0.0, "kl_sum": 0.0}
+        stats = {"entropy_sum": 0.0, "kl_sum": 0.0, "tis_w_sum": 0.0, "tis_n": 0.0}
         n_tok = sum(len(s.completion_ids) for s in samples)
         if samples:
             model.train()
             for mb in token_budget_batches(samples, int(cfg.get("micro_batch_tokens", 16384)),
                                            int(cfg.get("micro_batch_max_samples", 8))):
                 loss, st = pg_kl_loss(model, mb, pad, n_tok, float(cfg.get("kl_coef", 0.01)),
-                                      int(cfg.get("logprob_chunk", 2048)), cfg.get("tis_cap"))
+                                      int(cfg.get("logprob_chunk", 2048)), tis_cap)
                 loss.backward()
                 for kk, v in st.items():
                     stats[kk] += v
@@ -239,11 +264,13 @@ def train(cfg: dict[str, Any]) -> Path:
         acc = np.concatenate([g.acc for g in res])
         fid = np.concatenate([g.fid for g in res])
         gate_s = res[0].terms.get("gate_S") if res else None
-        row = {"step": step, "sec": round(time.time() - t0, 1), "reward": float(allr.mean()), "r_coh": float(coh.mean()),
+        row = {"step": step, "sec": round(time.time() - t0, 1), "gen_sec": round(t_gen, 1),
+               "reward": float(allr.mean()), "r_coh": float(coh.mean()),
                "r_acc": float(acc.mean()), "r_fid": float(fid.mean()), "M": float(M), "gate_S": gate_s,
                "invalid_frac": invalid / max(1, len(outs)), "kept_groups": kept, "skipped_groups": skipped,
                "tokens": n_tok, "entropy": stats["entropy_sum"] / max(1, n_tok), "kl": stats["kl_sum"] / max(1, n_tok),
-               "grad_norm": gn, "lr": sched.get_last_lr()[0]}
+               "grad_norm": gn, "lr": sched.get_last_lr()[0],
+               "tis_w": stats["tis_w_sum"] / stats["tis_n"] if stats["tis_n"] else None}
         log.log(row)
         m_hist.append(float(M))
         if len(m_hist) > 5:
