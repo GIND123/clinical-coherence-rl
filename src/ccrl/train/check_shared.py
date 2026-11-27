@@ -9,8 +9,8 @@ it compares the unshared and the shared pass:
   * LoRA gradient: cosine similarity and relative norm difference;
   * seconds for the whole step's forward + backward, and peak memory (the unshared pass runs here
     without checkpointing, in smaller micro-batches; its production time is the logged 66 s).
-Pass: gradient cosine >= 0.999 and relative norm difference <= max(1%, 1.5 x the bf16 noise floor,
-i.e. the difference between two groupings of the unshared pass itself). Exit code 0 = pass, 4 = fail
+Pass (`verdict`): gradient cosine >= min(0.999, 1 - 1.5 (1 - floor cosine)) and relative difference
+<= max(1%, 1.5 x floor), where the floor compares two micro-batch groupings of the unshared pass. Exit code 0 = pass, 4 = fail
 (the queue then trains with `--no-shared`, the unshared pass with gradient checkpointing).
 """
 from __future__ import annotations
@@ -20,6 +20,12 @@ import json
 import random
 import time
 from pathlib import Path
+
+
+def verdict(cos: float, rel: float, floor_cos: float, floor_rel: float) -> bool:
+    """Equivalent at bf16 precision: the shared pass is no further from the unshared pass than the
+    unshared pass is from itself under another micro-batch grouping (x1.5), on both measures."""
+    return bool(cos >= min(0.999, 1 - 1.5 * (1 - floor_cos)) and rel <= max(0.01, 1.5 * floor_rel))
 
 
 def main(argv=None) -> int:
@@ -114,7 +120,7 @@ def main(argv=None) -> int:
            "floor_logprob_absdiff_mean": floor_lp,
            # equivalent if the shared pass differs from the unshared one by no more than regrouping the
            # unshared pass does (x1.5), or by at most 1%; the fp32 CPU test checks exact equality
-           "pass": bool(cos >= 0.999 and rel <= max(0.01, 1.5 * floor_rel))}
+           "pass": verdict(cos, rel, floor_cos, floor_rel)}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=1), encoding="utf-8")
     print(json.dumps(res, indent=1))
