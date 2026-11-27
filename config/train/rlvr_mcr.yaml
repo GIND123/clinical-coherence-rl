@@ -1,0 +1,6 @@
+# Real-case RLVR baseline (Amendment 6): binary top-1 reward on the same 2,000 labelled
+# MedCaseReasoning training cases as ccr_mcr.
+base: base.yaml
+dataset: medcase
+label_free: false
+reward: {alpha: 1.0, beta: 0.0, gamma: 0.0, acc_mode: binary}

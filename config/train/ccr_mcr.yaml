@@ -1,0 +1,9 @@
+# Real-case training (plan_final.md, Amendment 6): the method's reward (coherence + Brier accuracy)
+# trained on the 2,000 labelled MedCaseReasoning training cases (published case reports, 10
+# candidates each; disjoint from the 300 panel cases and the post-freeze cases). No KB-Bayes
+# reference exists for real cases, so the fidelity term is off (gamma 0). Answers the
+# "trained only on synthetic data" objection.
+base: base.yaml
+dataset: medcase
+label_free: false
+reward: {alpha: 1.0, beta: 1.0, gamma: 0.0}

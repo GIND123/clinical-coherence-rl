@@ -118,7 +118,10 @@ sft() {  # cfg seed
 # per-machine stage A queues (plan_final.md §3.5): phase@estimated $ (50 s/step on the H100)
 H100_Q=(check@1 prep@2 train:ccr_acc_fid:0:50@4 gonogo:ccr_acc_fid:0@0.5 train:ccr_acc_fid:0@13 post:ccr_acc_fid:0@1.5
         train:brier_only:0@16 post:brier_only:0@1 train:mech_team_lenient:0@3.5 post:mech_team_lenient:0@1
-        train:mech_registered_strict:0@3.5 post:mech_registered_strict:0@1 train:ccr_acc_fid:1@16 post:ccr_acc_fid:1@1.5)
+        train:mech_registered_strict:0@3.5 post:mech_registered_strict:0@1 train:ccr_acc_fid:1@16 post:ccr_acc_fid:1@1.5
+        train:ccr_mcr:0@14 post:ccr_mcr:0@1 train:rlvr_mcr:0@7 post:rlvr_mcr:0@1)
+# (the real-case pair at the end runs only if the budget guard finds the money: Brier-only is
+#  predicted to be stopped early by the safeguard, which frees about $14)
 A100_Q=(train:rlvr:0@6 post:rlvr:0@1 sft:bct:0@2 sft:sft_selfcons:0@2.5 train:rlvr:1@6 post:rlvr:1@1)
 
 phases=("$@")
