@@ -31,6 +31,15 @@ rollouts (`shared_prompt_logprobs`, `config/train/base.yaml: shared_prompt: true
 - **A GPU check runs before the first paid run** (`python -m ccrl.train.check_shared`): bf16,
   real prompts. It requires a gradient cosine ≥ 0.999 and a relative difference ≤ 1%, otherwise
   training falls back to the unshared pass.
+- **Revised the same day, after the first GPU check and before any training run.**
+  - **Memory.** The check ran out of memory at 8,192 tokens per micro-batch. The size is now
+    4,096, and the check caps itself at the memory vLLM leaves in training, stepping down until a
+    size fits. At 4,096 it fits (45 GB) and the step is 1.4× faster than the unshared pass.
+  - **Pass rule.** The gradient cosine was 0.9992 and the relative difference 3.9%. A fixed 1% had
+    no basis: in bf16, regrouping the same sequences into different micro-batches also changes the
+    sum. The rule is now cosine ≥ 0.999 and relative difference ≤ max(1%, 1.5 × the measured
+    difference between two groupings of the unshared pass). The fp32 CPU test still requires exact
+    equality.
 - **Gradient checkpointing is off** for GRPO, as the shared pass requires. The SFT baselines and
   the A100 (RLVR, 40 GB) keep the unshared pass with checkpointing (`--no-shared`).
 

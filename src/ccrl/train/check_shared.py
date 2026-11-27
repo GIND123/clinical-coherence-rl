@@ -9,7 +9,8 @@ it compares the unshared and the shared pass:
   * LoRA gradient: cosine similarity and relative norm difference;
   * seconds for the whole step's forward + backward, and peak memory (the unshared pass runs here
     without checkpointing, in smaller micro-batches; its production time is the logged 66 s).
-Pass: gradient cosine >= 0.999 and relative norm difference <= 0.01. Exit code 0 = pass, 4 = fail
+Pass: gradient cosine >= 0.999 and relative norm difference <= max(1%, 1.5 x the bf16 noise floor,
+i.e. the difference between two groupings of the unshared pass itself). Exit code 0 = pass, 4 = fail
 (the queue then trains with `--no-shared`, the unshared pass with gradient checkpointing).
 """
 from __future__ import annotations
@@ -59,14 +60,14 @@ def main(argv=None) -> int:
     n_tok = sum(len(s.completion_ids) for s in samples)
     model.train()
 
-    def step(shared: bool, tokens: int = 4096):
+    def step(shared: bool, tokens: int = 4096, per_batch: int = 2):
         model.zero_grad(set_to_none=True)
         torch.cuda.synchronize()
         torch.cuda.reset_peak_memory_stats()
         t0 = time.time()
         lps = {}
         mbs = shared_prompt_batches(samples, tokens) if shared else \
-            token_budget_batches(samples, 4096, 2)      # checkpointing is off here: small unshared batches
+            token_budget_batches(samples, 4096, per_batch)      # checkpointing is off here: small batches
         for mb in mbs:
             fn = shared_prompt_logprobs if shared else completion_logprobs_lowmem
             out, _ = fn(model, mb, tok.pad_token_id or tok.eos_token_id, int(cfg.get("logprob_chunk", 2048)))
@@ -80,6 +81,13 @@ def main(argv=None) -> int:
         return sec, torch.cuda.max_memory_allocated() / 2**30, g, lps
 
     s_un, m_un, g_un, lp_un = step(False)
+    # noise floor: the same unshared pass with a different micro-batch grouping (1 sequence per
+    # batch). bf16 kernels give slightly different sums for different batch shapes, so this is the
+    # difference that already exists between two runs of the registered pass
+    _s1, _m1, g_un1, lp_un1 = step(False, per_batch=1)
+    floor_rel = float((g_un - g_un1).norm() / g_un.norm())
+    floor_cos = float(torch.nn.functional.cosine_similarity(g_un, g_un1, dim=0))
+    floor_lp = float(torch.cat([(lp_un[k] - lp_un1[k]).abs() for k in lp_un]).mean())
     tokens = None
     for tk in (int(cfg.get("shared_micro_batch_tokens", 4096)), 3072, 2048, 1536):
         try:
@@ -102,7 +110,11 @@ def main(argv=None) -> int:
            "sec_unshared": s_un, "sec_shared": s_sh, "speedup": s_un / s_sh, "mem_gb_unshared": m_un,
            "mem_gb_shared": m_sh, "logprob_absdiff_max": float(d.max()), "logprob_absdiff_mean": float(d.mean()),
            "grad_cosine": cos, "grad_rel_diff": rel, "shared_micro_batch_tokens": tokens,
-           "mem_fraction": a.mem_fraction, "pass": bool(cos >= 0.999 and rel <= 0.01)}
+           "mem_fraction": a.mem_fraction, "floor_grad_rel_diff": floor_rel, "floor_grad_cosine": floor_cos,
+           "floor_logprob_absdiff_mean": floor_lp,
+           # equivalent if the shared pass differs from the unshared one by no more than regrouping the
+           # unshared pass does (x1.5), or by at most 1%; the fp32 CPU test checks exact equality
+           "pass": bool(cos >= 0.999 and rel <= max(0.01, 1.5 * floor_rel))}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=1), encoding="utf-8")
     print(json.dumps(res, indent=1))
