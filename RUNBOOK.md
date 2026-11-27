@@ -324,6 +324,10 @@ Without push access, zip `config/models.lock.yaml` and the whole
 > now sets the hard cap to $760, with tighter job caps. Kimi K3 is most of the contamination cost, so
 > running it last means a cap can only shorten the probe.
 >
+> **One command does all three in this order, then exports and packs:**
+> `git pull && bash scripts/final_bedrock.sh start`. Watch it with
+> `tail -f runs/logs/final_bedrock.log`.
+>
 > `ccrl freeze --check` now lists **43 files**. The two new ones are training-only banks that no
 > Bedrock job reads.
 

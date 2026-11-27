@@ -12,6 +12,13 @@
 # queue process dies, or when the hard cap is reached: hours since start x price >= budget + $2.
 set -euo pipefail
 machine=$1 id=$2 ip=$3 price=$4 budget=$5
+# keys saved as Windows user environment variables are read from there if this shell lacks them
+for v in LAMBDA_API_KEY HF_TOKEN; do
+  if [ -z "${!v:-}" ] && command -v powershell.exe >/dev/null; then
+    export "$v=$(powershell.exe -NoProfile -Command "[Environment]::GetEnvironmentVariable('$v','User')" | tr -d '\r')"
+  fi
+done
+[ -n "${LAMBDA_API_KEY:-}" ] || { echo "LAMBDA_API_KEY not set"; exit 1; }
 key=${SSH_KEY:-~/.ssh/govind_llm}
 dest="${CCRL_DATA:-E:/ccrl-data}/lambda_runs/stage_a_${machine}"
 mkdir -p "$dest"
@@ -37,6 +44,10 @@ while :; do
     pull
     echo "terminating $machine ($id): $state  ~\$$cost"
     python scripts/lambda_api.py terminate "$id" --yes
+    # adapter weights only, from this machine (the HF token never goes to the shared instance)
+    if [ -n "${HF_TOKEN:-}" ]; then
+      python scripts/upload_adapters.py "$dest/runs" || echo "adapter upload failed: rerun scripts/upload_adapters.py $dest/runs"
+    fi
     break
   fi
 done
