@@ -12,8 +12,10 @@ cd clinical-coherence-rl && git pull --ff-only
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip wheel
-pip install vllm                                   # pulls the torch build vLLM is compiled against
-pip install -r requirements/train.txt
+# vLLM 0.11.0 is built for torch 2.8 + CUDA 12.8, which the Lambda driver (570, CUDA 12.8) supports.
+# Unpinned, pip takes the newest vLLM, built for CUDA 13, and the engine fails with "driver too old".
+pip install "vllm==0.11.0"                         # pulls the matching torch build
+pip install -r requirements/train.txt pytest
 pip install -e . --no-deps
 mkdir -p runs/env
 pip freeze > "runs/env/pip-freeze-$(date +%Y%m%d-%H%M%S).txt"
