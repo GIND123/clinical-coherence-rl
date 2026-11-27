@@ -38,6 +38,7 @@ more coherent than much larger ones.
 | Frozen inputs (`artifacts/frozen/`, `models.lock.yaml`) and 2,000 MedCaseReasoning training cases | in the repository |
 | OSF | **training study (Paper 2) registered 26 Nov 2026, before any training: [osf.io/4xmq7](https://osf.io/4xmq7)**. The Bedrock panel was not registered before collection (stated in [docs/preregistration.md](docs/preregistration.md)) |
 | Reward and synthetic-policy suite (Propositions 2 and 4) | done; 10/10 criteria pass |
+| Paper 2 decisive pair | two attempts stopped by the collapse safeguard ([docs/training_runs.md](docs/training_runs.md)); diagnosed as a readout channel plus frozen batch gates; **Amendment 4** (strict readout, team credit, informativeness guard) before the next run ([docs/amendment_4.md](docs/amendment_4.md)); estimator audit `python -m ccrl.reward.audit` |
 | Trainer, baselines, local evaluation, trained-vs-panel comparison | code done; CPU smoke-tested; GPU runs pending |
 | Tests | `python -m pytest -q` (CPU, ~3 min) |
 

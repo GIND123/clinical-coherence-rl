@@ -24,6 +24,15 @@ Tests (case bootstrap, 2,000 resamples, seed 0; one-sided where registered; Holm
       middle-ranked models (by mean) of the six.
   H7  gap closure (gap_base - gap_CCR) / gap_base >= 0.5, for top-1 and Brier: one-sided test
       of closure > 0.5
+
+Informativeness guard (Amendment 4, 27 Nov 2026; added before any run under the amendment).
+Total incoherence is minimised by answering every patient with the same flat posterior, and the
+first decisive coherence run did exactly that (docs/training_runs.md). H2 is therefore reported as
+supported only if, on the same DDXPlus items, the CCR arm keeps (a) at least 90% of RLVR's
+cross-patient information M of the base answers (a registered safeguard estimand) and (b) a mean
+posterior entropy no more than 0.5 nats above RLVR's. Reported alongside (secondary): the share of
+answers whose percentages sum to 100 (+-2), and normalised incoherence = total incoherence / mean JS
+between the case's base answer and the other cases' base answers (unchanged by uniform tempering).
 """
 from __future__ import annotations
 
@@ -190,6 +199,60 @@ def h7(ccr: pd.DataFrame, base: pd.DataFrame, ds: str = "ddxplus", seed: int = 0
     return pd.DataFrame(rows)
 
 
+# ------------------------------------------------------------------ informativeness guard (Amendment 4)
+def informativeness(parquet: str, ds: str = "ddxplus", model: str | None = None) -> tuple[dict, pd.DataFrame]:
+    """Dataset-level M, entropy and sum-to-100 compliance of the base answers, plus per-case
+    between-patient JS (the denominator of normalised incoherence)."""
+    from ccrl.analysis.metrics import entropy, js_rows
+    from ccrl.reward.coherence import cross_patient_information
+    d = pd.read_parquet(parquet)
+    if model is not None and "model_key" in d:
+        d = d[d["model_key"] == model]
+    d = d[(d["dataset"] == ds) & (d["transform"] == "base") & d["parse_ok"].astype(bool) & d["probs"].notna()]
+    if d.empty:
+        return {}, pd.DataFrame(columns=["case_id", "between"])
+    d = d.drop_duplicates("case_id")
+    P = np.stack([np.asarray(p, dtype=float) for p in d["probs"]])
+    sums = d["text"].map(_raw_sum)
+    between = []
+    for i in range(len(P)):
+        other = np.delete(P, i, axis=0)
+        between.append(float(js_rows(other, np.repeat(P[i][None], len(other), 0)).mean()))
+    info = {"M": cross_patient_information(list(P)), "entropy": float(np.mean([entropy(p) for p in P])),
+            "max_prob": float(P.max(1).mean()), "sum100": float(np.mean(np.abs(sums.dropna() - 100) <= 2))
+            if sums.notna().any() else np.nan, "n": int(len(P))}
+    return info, pd.DataFrame({"case_id": d["case_id"].values, "between": between})
+
+
+def _raw_sum(text) -> float:
+    m = re.search(r'"p"\s*:\s*\{(.*?)\}', text or "", re.S)
+    if not m:
+        return np.nan
+    vals = re.findall(r'"[A-Za-z]{2}"\s*:\s*(-?[0-9.]+)', m.group(1))
+    return float(sum(float(v) for v in vals)) if vals else np.nan
+
+
+def guard(ccr_paths: list[str], rlvr_paths: list[str], ccr_pc: pd.DataFrame, rlvr_pc: pd.DataFrame,
+          ds: str = "ddxplus") -> pd.DataFrame:
+    ic = [informativeness(p, ds)[0] for p in ccr_paths]
+    ir = [informativeness(p, ds)[0] for p in rlvr_paths]
+    mean = lambda L, k: float(np.mean([x[k] for x in L if x]))  # noqa: E731
+    Mc, Mr, Ec, Er = mean(ic, "M"), mean(ir, "M"), mean(ic, "entropy"), mean(ir, "entropy")
+    rows = [{"hypothesis": "H2 guard", "dataset": ds, "M_ccr": Mc, "M_rlvr": Mr, "entropy_ccr": Ec, "entropy_rlvr": Er,
+             "sum100_ccr": mean(ic, "sum100"), "sum100_rlvr": mean(ir, "sum100"),
+             "supported": bool(Mc >= 0.9 * Mr and Ec <= Er + 0.5)}]
+    bc = pd.concat([informativeness(p, ds)[1] for p in ccr_paths]).groupby("case_id", as_index=False).mean()
+    br = pd.concat([informativeness(p, ds)[1] for p in rlvr_paths]).groupby("case_id", as_index=False).mean()
+    a = ccr_pc[ccr_pc["dataset"] == ds].merge(bc, on="case_id")
+    b = rlvr_pc[rlvr_pc["dataset"] == ds].merge(br, on="case_id")
+    if len(a) and len(b):
+        nc = a["total"].mean() / a["between"].mean()
+        nr = b["total"].mean() / b["between"].mean()
+        rows.append({"hypothesis": "normalised incoherence (secondary)", "dataset": ds, "ccr": nc, "rlvr": nr,
+                     "relative_reduction": 1 - nc / nr if nr else np.nan})
+    return pd.DataFrame(rows)
+
+
 # ------------------------------------------------------------------ driver
 def _arm_files(d: Path, arm: str) -> list[str]:
     return sorted(str(p) for p in d.glob(f"{arm}_s*.parquet") if re.fullmatch(rf"{re.escape(arm)}_s\d+", p.stem))
@@ -205,6 +268,7 @@ def run(eval_dir: str, panel_parquet: str | None = None, ws: Workspace | None = 
     base4 = per_case(str(d / "base4b.parquet"), ws=ws) if (d / "base4b.parquet").exists() else None
     if "ccr_acc_fid" in P and "rlvr" in P:
         out.append(h2(P["ccr_acc_fid"], P["rlvr"]))
+        out.append(guard(arms["ccr_acc_fid"], arms["rlvr"], P["ccr_acc_fid"], P["rlvr"]))
         out.append(pd.DataFrame([noninferiority(P["ccr_acc_fid"], P["rlvr"], "ddxplus", "top1", 0.02, "H3")]))
         from ccrl import paths
         held = json.loads((paths.FROZEN_DDX / "heldout.json").read_text())["heldout"]

@@ -48,3 +48,10 @@ collapse_drop: 0.30
 reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.788, delta_S: 0.234, m0: 0.459, c_fid: 3.0,
          sensitivity: batch, acc_mode: brier}
 output_dir: runs/train/{name}_s{seed}
+# Amendment 4 (27 Nov 2026, docs/amendment_4.md), before any further run:
+# credit: team -> each rollout's advantage uses its marginal contribution to the batch objective,
+#   D_i = J(y) - J(y without i); identical to the reward itself for arms without coupled terms (RLVR, RLCR).
+# readout.strict_sum -> for the reward, an answer is valid only if its percentages sum to 100 +- sum_tol,
+#   as the prompt instructs. Evaluation keeps the registered (renormalising) readout.
+credit: team
+readout: {strict_sum: true, sum_tol: 2}

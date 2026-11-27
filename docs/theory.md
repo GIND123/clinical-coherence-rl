@@ -208,3 +208,87 @@ fidelity and accuracy, not from coherence.
   accuracy and direction agreement (non-inferiority, H5).
 * Claims of moving *toward Bayes* belong to the arms with fidelity or
   accuracy (`ccr_acc_fid`, H6).
+
+## 5. From objective to update (added 27 Nov 2026, Amendment 4)
+
+Propositions 2–4 are statements about the **expected reward**: which policies it ranks first.
+The first two decisive runs showed that this is not enough. A policy-gradient estimator follows
+the gradient of *some* objective, and with batch-level terms that objective need not be the
+registered one. Section 4's guarantee therefore needs the two results below.
+
+**Setup.** One step samples rollouts y = (y_1, …, y_n) independently given their prompts (the
+renderings x, x', x− of B patients). Rollout j receives R_j(y), which depends on other rollouts
+through the partner means, the leave-one-out floors, fidelity's cross-rendering means, and the
+batch statistics M and G_S. The registered batch objective is J(y) = Σ_j R_j(y).
+
+**Proposition 6 (frozen couplings).** Let the advantage of rollout i be any function of R_i(y) and
+of the rewards of rollouts on the same prompt: per-prompt centring with or without SD
+normalisation, as in GRPO. Then the expected update is the expected update of the surrogate
+reward R̃_i(y_i) = R_i(y_i; y_{−i} fixed). In particular, a term c(y)·b_i(y_i) with a batch-level
+factor c contributes c ∇E[b], never b ∇E[c].
+
+- **Multiplicative batch gates never act on the update.** A gate like min(1, M/m0) at most
+  rescales the term it multiplies.
+- **The training direction is ∇E[Σ_i R̃_i].** For the registered coherence reward this is the
+  gradient of invariance plus Brier with the gates held fixed. A uniform answer maximises
+  invariance, and an overconfident model gains Brier by flattening.
+
+*Proof sketch.* E[A_i ∇log π(y_i)] involves R_i only through E[R_i | y_i]. The gates' dependence
+on y_i enters every other rollout's reward, and those rewards are never multiplied by y_i's score.
+Gao et al. (arXiv:2611.02404, Thm. 1) give the exact identity within one prompt's group: there the
+externality enters with weight −1/(K−1), and a term shared by the whole group with weight 0.
+Batch-level terms are shared by every group, hence weight 0. ∎
+
+**Proposition 7 (team credit is unbiased).** Let D_i = J(y) − J(y_{−i}), where J(y_{−i}) recomputes
+the objective without rollout i. Then E[Σ_i D_i ∇log π(y_i | x_i)] = ∇_θ E[J(y)].
+
+*Proof.* REINFORCE gives ∇E[J] = E[J Σ_i ∇log π(y_i)]. J(y_{−i}) is a function of the other
+rollouts only, which are independent of y_i given the prompts, so E[J(y_{−i}) ∇log π(y_i)] = 0. ∎
+
+Notes on the estimator:
+
+- **Centring.** Per-rendering centring of D_i, as GRPO does for R_i, adds only second-order
+  terms: the interaction of two rollouts of the same rendering through the patient mean.
+- **Cost.** Exact recomputation is cheap: one group plus two batch scalars per removed rollout.
+- **Arms without coupled terms.** For RLVR and RLCR, D_i = R_i.
+
+*Remark (how strong the gate's protection is).* Under team credit, a rollout that lowers M is
+charged β G_S (Σ_j I_j)(M − M_{−i})/m0 while M < m0. The charge scales with the coherence the
+batch has already earned. In a batch where every rendering disagrees (I ≈ 0), one rollout's
+flattening can still pay. That is a property of the registered objective, not of the estimator,
+and it does not arise from the untrained 4B (I ≈ 0.67 at step 1). The estimator audit (§6) checks
+the population-level outcome.
+
+**Observation (the readout channel).** If the stated values v are renormalised, q = v / Σv, then
+adding a filler f to every non-top code moves q towards uniform:
+
+- the top probability is v_top / (v_top + (K−1) f);
+- any two such answers converge in JS as f grows;
+- the token change does not depend on how far the posterior moves.
+
+Any reward that favours flatter answers then has a near-zero-KL direction of increase. The prompt
+already requires Σv = 100. Enforcing that requirement for the reward (A4.1) closes the channel:
+flattening must then lower the stated top percentage explicitly.
+
+## 6. Estimator audit (`python -m ccrl.reward.audit`)
+
+**The policy.** Each rollout draws (log T_i, log k_i, log s_i) ~ N(θ, 0.3² I) and answers
+q_i = softmax((log b + k_i u_r + s_i ε_i)/T_i).
+
+- **The belief b.** An imperfect, overconfident one: a systematic misdiagnosis for 65% of
+  patients, with logits 0.3·log(oracle) + N(0, 0.5²). This matches the untrained 4B (top-1 0.31,
+  entropy 1.6).
+- **The training.** The registered ccr_acc_fid reward on DDXPlus training patients, with
+  B = 16, G = 4, H = 2, and 150 Adam steps on θ.
+
+| credit | T | entropy (nats) | M | JS(x, x') | registered objective |
+|---|---|---|---|---|---|
+| start | 1.04 | 1.54 | 0.58 | 0.22 | 1.24 |
+| registered (per-rollout R_i) | 6.9 | 3.87 (uniform 3.89) | 0.005 | 0.002 | 0.52 |
+| team credit (D_i) | 1.17 | 1.97 | 0.50 (m0 = 0.459) | 0.06 | 1.48 |
+
+- **Registered credit reproduces the GPU failure:** monotone flattening, M collapsing, and the
+  registered objective falling while it trains.
+- **Team credit holds the M constraint near m0.** The remaining invariance gain comes from lower
+  presentation sensitivity (k: 1.0 → 0.13) and lower noise (s: 0.71 → 0.16), which is the
+  intended mechanism.

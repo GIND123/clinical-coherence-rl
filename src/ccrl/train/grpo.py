@@ -10,14 +10,23 @@ One step:
      policy hot-swapped as a LoRA adapter every step and truncated importance
      sampling on the engine's token log-probs (ccrl/train/vllm_backend.py).
   3. parse each completion's stated posterior (same parser as the panel)
+     Readout (Amendment 4): with `readout.strict_sum` an answer counts as valid only if its
+     percentages sum to 100 (+- sum_tol), as the prompt instructs. The panel parser renormalises
+     any sum, which let the first decisive runs flatten every answer by writing filler values
+     for all 49 codes at almost no token cost (docs/training_runs.md).
   4. rewards for the whole batch (ccrl.reward.coherence.batch_rewards):
-     M and the sensitivity gate are batch-level; I, fidelity and accuracy per rollout
+     M and the sensitivity gate are batch-level; I, fidelity and accuracy per rollout.
+     Credit (Amendment 4): `credit: team` gives each rollout its marginal contribution to the
+     batch objective, D_i = J(y) - J(y without i) (ccrl.reward.coherence.team_credit), so the
+     batch-level gates reach the update; `credit: reward` is the original per-rollout R_i.
   5. advantages standardised within each PAIRED group (2G + H rollouts); groups
      with no reward spread are skipped (DAPO dynamic sampling)
   6. loss = token-level policy gradient (on-policy, one optimiser step per batch)
           + kl_coef * KL(pi || pi_ref) (k3 estimator; reference = LoRA disabled)
 Safeguards (plan §3.6): per-step logging of M, between-patient JS, entropy,
-invalid fraction; early stop when M falls > 30% below its first-5-step mean.
+invalid fraction; early stop when the 20-step mean of M falls > 30% below its first-10-step mean
+(OSF update, 27 Nov 2026). M for the safeguard is computed under the registered readout
+(every parsed answer, renormalised), so that strict_sum does not change what it monitors.
 """
 from __future__ import annotations
 
@@ -30,7 +39,8 @@ import numpy as np
 import yaml
 
 from ccrl.prompts.parse import parse_posterior
-from ccrl.reward.coherence import PatientGroup, RewardConfig, advantages, batch_rewards
+from ccrl.reward.coherence import (PatientGroup, RewardConfig, advantages, batch_rewards, cross_patient_information,
+                                   patient_mean, team_credit)
 from ccrl.train.common import (JsonlLogger, Sample, completion_logprobs_lowmem, encode_chat, load_model_and_tokenizer,
                                lr_lambda, set_seed, token_budget_batches)
 from ccrl.train.data import PairedSampler
@@ -98,6 +108,14 @@ class HFGenerator:
                         break
                 out.append((list(p), comp, self.tok.decode(comp, skip_special_tokens=True), None))
         return out
+
+
+def readout_valid(res, strict_sum: bool, sum_tol: float) -> bool:
+    """Whether a parsed answer counts for the reward. Registered readout: any parsed answer
+    (renormalised). Strict readout (Amendment 4): its percentages must also sum to 100 +- sum_tol."""
+    if not res.ok:
+        return False
+    return not strict_sum or abs(float(res.raw_sum) - 100.0) <= sum_tol
 
 
 # --------------------------------------------------------------------- loss
@@ -200,8 +218,14 @@ def train(cfg: dict[str, Any]) -> Path:
         sampler.r.seed(seed * 100003 + start)
         print(f"[grpo] resumed from {d} at step {start}", flush=True)
     # M history survives a resume (read back from the log), so the collapse baseline is stable
-    m_hist: list[float] = [float(r["M"]) for r in _log_rows(out_dir) if "sec" in r and r.get("step", 0) < start]
+    m_hist: list[float] = [float(r.get("M_lenient", r["M"])) for r in _log_rows(out_dir)
+                           if "sec" in r and r.get("step", 0) < start]
     K_of = None
+    ro = cfg.get("readout") or {}
+    strict_sum, sum_tol = bool(ro.get("strict_sum", False)), float(ro.get("sum_tol", 2.0))
+    credit = cfg.get("credit", "reward")
+    if credit not in ("reward", "team"):
+        raise SystemExit(f"unknown credit {credit!r} (reward | team)")
     for step in range(start, steps + 1):
         t0 = time.time()
         groups = sampler.sample(B, G, H)
@@ -215,18 +239,35 @@ def train(cfg: dict[str, Any]) -> Path:
         outs = gen(convs)
         t_gen = time.time() - tg
         parsed: dict[tuple[int, str], list] = {}
-        invalid = 0
+        lenient: dict[tuple[int, str], list] = {}      # every parsed answer, renormalised (registered readout)
+        invalid = noncompliant = 0
+        sums: list[float] = []
         for (gi, part), (_p, _c, text, _lp) in zip(index, outs):
             res = parse_posterior(text, groups[gi].codes)
-            if not res.ok:
+            ok = readout_valid(res, strict_sum, sum_tol)
+            if res.ok:
+                sums.append(float(res.raw_sum))
+                noncompliant += int(not ok)
+            if not ok:
                 invalid += 1
-            parsed.setdefault((gi, part), []).append(res.vector if res.ok else None)
+            parsed.setdefault((gi, part), []).append(res.vector if ok else None)
+            lenient.setdefault((gi, part), []).append(res.vector if res.ok else None)
         pgs = []
         for gi, gp in enumerate(groups):
             K_of = len(gp.codes)
             pgs.append(PatientGroup(parsed.get((gi, "x"), []), parsed.get((gi, "xp"), []), parsed.get((gi, "xm"), []),
                                     gold=gp.gold, added_loglik=gp.added_loglik, K=len(gp.codes)))
-        res, M = batch_rewards(pgs, rcfg, K_of)
+        # M under the registered (renormalising) readout: the statistic the collapse safeguard was
+        # registered on; identical to the reward's M when strict_sum is off (Amendment 4)
+        lm = [patient_mean(PatientGroup(lenient.get((gi, "x"), []), lenient.get((gi, "xp"), []), [], K=len(gp.codes)),
+                           len(gp.codes)) for gi, gp in enumerate(groups)]
+        kx = max(len(m) for m in lm)
+        M_len = cross_patient_information([np.pad(m, (0, kx - len(m))) for m in lm])
+        if credit == "team":
+            signal, res, M = team_credit(pgs, rcfg, K_of)
+        else:
+            res, M = batch_rewards(pgs, rcfg, K_of)
+            signal = [gr.total for gr in res]
         samples: list[Sample] = []
         kept = skipped = 0
         k = 0
@@ -235,7 +276,7 @@ def train(cfg: dict[str, Any]) -> Path:
             gp = groups[gi]
             rendering = cfg.get("advantage_baseline", "rendering") == "rendering"
             sizes = (len(gp.x), len(gp.xp), len(gp.xm)) if rendering else None
-            adv = advantages(gr.total, bool(cfg.get("normalize_std", True)), float(cfg.get("min_group_std", 1e-4)), sizes)
+            adv = advantages(signal[gi], bool(cfg.get("normalize_std", True)), float(cfg.get("min_group_std", 1e-4)), sizes)
             rows = list(range(k, k + n))
             k += n
             if adv is None:
@@ -270,13 +311,18 @@ def train(cfg: dict[str, Any]) -> Path:
         gate_s = res[0].terms.get("gate_S") if res else None
         row = {"step": step, "sec": round(time.time() - t0, 1), "gen_sec": round(t_gen, 1),
                "reward": float(allr.mean()), "r_coh": float(coh.mean()),
-               "r_acc": float(acc.mean()), "r_fid": float(fid.mean()), "M": float(M), "gate_S": gate_s,
-               "invalid_frac": invalid / max(1, len(outs)), "kept_groups": kept, "skipped_groups": skipped,
+               "r_acc": float(acc.mean()), "r_fid": float(fid.mean()), "M": float(M), "M_lenient": float(M_len),
+               "gate_S": gate_s,
+               "invalid_frac": invalid / max(1, len(outs)), "noncompliant_frac": noncompliant / max(1, len(outs)),
+               "sum100_frac": float(np.mean([abs(x - 100.0) <= sum_tol for x in sums])) if sums else None,
+               "raw_sum_median": float(np.median(sums)) if sums else None,
+               "credit_mean": float(np.mean(np.concatenate(signal))) if signal else None,
+               "kept_groups": kept, "skipped_groups": skipped,
                "tokens": n_tok, "entropy": stats["entropy_sum"] / max(1, n_tok), "kl": stats["kl_sum"] / max(1, n_tok),
                "grad_norm": gn, "lr": sched.get_last_lr()[0],
                "tis_w": stats["tis_w_sum"] / stats["tis_n"] if stats["tis_n"] else None}
         log.log(row)
-        m_hist.append(float(M))
+        m_hist.append(float(M_len))
         hit = collapse_check(m_hist, int(cfg.get("collapse_baseline_steps", 10)), int(cfg.get("collapse_window", 20)),
                              float(cfg.get("collapse_drop", 0.30)))
         if hit and cfg.get("collapse_stop", True):

@@ -31,7 +31,11 @@ for f in sorted(glob.glob("runs/train/*_s99/train_log.jsonl")):
     if rows:
         last = rows[-1]
         print(f"{f}: steps {len(rows)}  sec/step {sum(r['sec'] for r in rows[1:]) / max(1, len(rows) - 1):.1f}  "
-              f"gen_sec {last.get('gen_sec')}  invalid {last['invalid_frac']:.2f}  reward {last['reward']:.3f}  kl {last['kl']:.4f}  tis_w {last.get('tis_w')}")
+              f"gen_sec {last.get('gen_sec')}  invalid {last['invalid_frac']:.2f}  sum100 {last.get('sum100_frac')}  "
+              f"M {last['M']:.3f}  M_lenient {last.get('M_lenient')}  credit {last.get('credit_mean')}  "
+              f"reward {last['reward']:.3f}  kl {last['kl']:.4f}  tis_w {last.get('tis_w')}")
+        assert "M_lenient" in last and "credit_mean" in last, "Amendment 4 logging missing"
+        assert last.get("sum100_frac") is not None, "strict readout not active"
 PY
 rm -rf runs/train/*_s99
 echo "SMOKE OK"

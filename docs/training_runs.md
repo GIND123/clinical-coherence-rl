@@ -108,3 +108,26 @@ posterior towards uniform.
 Proposition 4 (gates exclude collapse) holds for the optimum of the expected reward. It does not
 constrain the per-rollout gradient that GRPO follows. RLVR also drifted towards flatter
 posteriors, but much less.
+
+### Revised diagnosis (27 Nov 2026, same day): two mechanisms, not one
+
+Reading the stopped adapters' raw answers changed the picture
+([amendment_4.md](amendment_4.md)).
+
+- **The flattening was filler, not stated hedging.** The prompt asks for percentages that sum to
+  100. The trained models kept their top diagnosis and wrote 2–5 for all 48 other codes, and the
+  parser renormalises any sum.
+  - Answers summing to 100 ± 2: untrained 30%, RLVR-36 16%, CCR-21 0%.
+  - Median raw sum: 147, 199 and 178.
+  - This also explains why RLVR, whose binary reward ignores the stated probabilities, flattened.
+- **The gates never reached the update.** M and G_S are batch statistics. Per-rendering advantages
+  hold them fixed (theory.md, Proposition 6). The coherence run's batch reward fell from 1.22 to
+  0.75 while each rollout's own terms improved.
+- **The estimator audit reproduces this with no language model** (theory.md §6). Under the
+  registered credit, M falls from 0.58 to 0.005 and the answer becomes uniform. Under team credit,
+  M holds at 0.50 and the invariance gain comes from lower presentation sensitivity.
+- **The raw H2 endpoint can be gamed.** RLVR-36's total incoherence fell 34% through flattening
+  alone, while normalised incoherence did not move (0.363 → 0.365).
+
+Changes before the next run: strict readout for the reward, team credit, and the safeguard on the
+registered readout's M (Amendment 4).

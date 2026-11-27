@@ -105,6 +105,45 @@ archive of every request and response.
 
 ## Paper 2 — method
 
+> **Reframed 27 Nov 2026 after the decisive attempts (docs/amendment_4.md).** The paper is now a
+> methodology paper about *making consistency rewards trainable*, with the clinical task as the
+> testbed. Contributions, in order:
+>
+> 1. **Diagnosis, preregistered.** A distributional consistency reward with provable anti-collapse
+>    gates (Prop. 4) still collapsed, in two independent ways:
+>    - the readout: renormalised filler gave the policy a near-zero-KL flattening channel;
+>    - the estimator: group-relative advantages freeze batch-level gates (Prop. 6).
+>
+>    This is the dual of the majority-vote collapse documented for label-free RLVR (TTRL and
+>    successors): consensus rewards collapse to overconfidence, distributional invariance
+>    rewards to hedging.
+> 2. **Method.** Selective coherence: invariance where the evidence is unchanged, Bayes-consistent
+>    movement where it changes (fidelity), and an informativeness constraint. It is trained with
+>    **team credit**, the exact marginal contribution of each rollout to the batch objective: an
+>    unbiased estimator (Prop. 7) that extends Team-GRPO (Gao et al. 2026) from one prompt's
+>    group to cross-rendering and cross-patient terms. A strict readout completes it.
+> 3. **Estimator audit.** A CPU-only test that predicts collapse *before* GPU training, by
+>    training a knob policy on the registered reward. It reproduces the GPU failure under the
+>    registered credit and its absence under team credit. Reward suites that test only expected
+>    values (like ours, which passed) miss this class of failure.
+> 4. **Evaluation.**
+>    - Consistency metrics are gameable by flattening, so H2 is reported with an
+>      informativeness guard and a tempering-robust normalised incoherence.
+>    - Consistency-training papers mostly report only raw agreement.
+>    - Selectivity is measured directly (contrast and fidelity terms), answering the critique
+>      that consistency training suppresses valid as well as invalid cues (Gupta et al.,
+>      arXiv:2610.25650).
+> 5. **Results:** RLVR vs CCR+acc+fid on DDXPlus, held-out pathologies, MedCaseReasoning and the
+>    post-freeze real case reports (Amendment 3), at 4B and 8B.
+>
+> Closest prior work to cite and position against:
+> - Team-GRPO (arXiv:2611.02404): within-prompt group rewards;
+> - consistency training (BCT, ACT, RMCT; arXiv:2610.25650, 2606.03810);
+> - label-free RLVR collapse (TTRL 2504.16084; 2610.37553; 2611.01307);
+> - peer prediction for LLMs (arXiv:2601.20299), the mechanism-design view of why
+>   uninformative agreement must score zero.
+
+
 **Working title.** *Coherence as a reward: label-free reinforcement learning
 that makes small clinical models stable and evidence-sensitive.*
 

@@ -244,6 +244,113 @@ def batch_rewards(groups: list[PatientGroup], cfg: RewardConfig, K: int) -> tupl
     return [group_rewards(g, M, cfg, k, gate_S=gate_S) for g, k in zip(groups, Ks)], M
 
 
+# ----------------------------------------------------------------------------- team credit
+# Amendment 4 (27 Nov 2026; docs/amendment_4.md, docs/theory.md Propositions 6-7).
+#
+# The registered objective of one step is the batch total J(y) = sum_j R_j(y). Several of its terms
+# couple rollouts: the gates M and G_S are batch statistics, invariance compares a rollout with the
+# OTHER rendering's rollouts, and fidelity compares full-evidence with reduced-evidence rollouts.
+# Feeding R_j itself into per-rendering centred advantages treats every coupling as a constant: the
+# update then follows the gradient of sum_j R_j with the gates (and partners) held fixed, which the
+# first decisive runs showed is maximised by flattening every answer (docs/training_runs.md).
+#
+# Team credit gives rollout i its exact marginal contribution
+#     D_i = J(y) - J(y without i),
+# where J(y without i) recomputes every term of the batch with rollout i removed. J(y without i) does
+# not depend on rollout i, so sum_i D_i * grad log pi(y_i) is an unbiased estimator of grad E[J]: the
+# registered objective, whose optimum Proposition 4 protects, is what training now follows. For a
+# reward without couplings (RLVR, RLCR: beta = gamma = 0) D_i = R_i exactly. The construction is the
+# difference reward of Wolpert & Tumer (2001), applied within one prompt's group by Team-GRPO
+# (Gao et al., arXiv:2611.02404); here it spans the renderings of a patient and the whole batch.
+
+def _m_gate(M: float, cfg: RewardConfig) -> float:
+    return (min(1.0, M / cfg.m0) if cfg.m0 > 0 else 1.0) if cfg.use_m_gate else 1.0
+
+
+def _s_gate(exc_sum: float, exc_n: int, cfg: RewardConfig) -> float:
+    """The batch sensitivity gate exactly as batch_rewards computes it (1 when it is not used)."""
+    if not (cfg.use_sensitivity and cfg.sensitivity == "batch"):
+        return 1.0
+    raw = (exc_sum / exc_n) / cfg.delta_S if exc_n and cfg.delta_S > 0 else 0.0
+    return float(np.sqrt(min(1.0, raw))) if cfg.sqrt_S else min(1.0, raw)
+
+
+def _group_parts(gr: GroupRewards, cfg: RewardConfig) -> tuple[float, float, float, int]:
+    """A group's total split around the batch gates: sum(total) = A + C * gate_S * gate(M).
+    Returns (A, C, sum of full-evidence excess, number of full-evidence rollouts)."""
+    v = gr.valid
+    A = float(np.sum(np.where(v, cfg.alpha * gr.acc + cfg.gamma * gr.fid, 0.0)))
+    Iu = gr.I if cfg.use_invariance else np.ones_like(gr.I)
+    if cfg.use_sensitivity and cfg.sensitivity != "batch":
+        Iu = Iu * (np.sqrt(gr.S) if cfg.sqrt_S else gr.S)
+    C = float(cfg.beta * np.sum(np.where(v, Iu, 0.0)))
+    ex = gr.terms["excess_full"]
+    return A, C, float(np.sum(ex)), int(len(ex))
+
+
+def drop_rollout(g: PatientGroup, i: int) -> PatientGroup:
+    """The group without its i-th rollout (rollouts ordered x, x', x-)."""
+    nx, nxp = len(g.q_x), len(g.q_xp)
+    q_x, q_xp, q_xm = list(g.q_x), list(g.q_xp), list(g.q_xm)
+    if i < nx:
+        q_x.pop(i)
+    elif i < nx + nxp:
+        q_xp.pop(i - nx)
+    else:
+        q_xm.pop(i - nx - nxp)
+    return PatientGroup(q_x, q_xp, q_xm, gold=g.gold, added_loglik=g.added_loglik, K=g.K)
+
+
+def team_credit(groups: list[PatientGroup], cfg: RewardConfig, K: int
+                ) -> tuple[list[np.ndarray], list[GroupRewards], float]:
+    """Per-rollout marginal contributions D_i = J(y) - J(y without i) to the batch objective.
+
+    Exact: removing a rollout changes its own group's terms and, through M and the sensitivity
+    gate, every group's coherence weight; other groups' acc, fid and I do not depend on it, so
+    each removal recomputes one group plus two batch scalars (checked against a full recomputation
+    in tests/test_team_credit.py). Returns (credits per group, the registered rewards, M)."""
+    res, M = batch_rewards(groups, cfg, K)
+    Ks = [int(g.K or K) for g in groups]
+    kmax = max(Ks) if Ks else K
+    means = [np.pad(patient_mean(g, k), (0, kmax - k)) for g, k in zip(groups, Ks)]
+    parts = [_group_parts(gr, cfg) for gr in res]
+    A_tot = sum(p[0] for p in parts)
+    C_tot = sum(p[1] for p in parts)
+    E_tot = sum(p[2] for p in parts)
+    N_tot = sum(p[3] for p in parts)
+    J = A_tot + C_tot * _s_gate(E_tot, N_tot, cfg) * _m_gate(M, cfg)
+    credits: list[np.ndarray] = []
+    for gi, (g, k) in enumerate(zip(groups, Ks)):
+        A_g, C_g, E_g, N_g = parts[gi]
+        n = len(g.q_x) + len(g.q_xp) + len(g.q_xm)
+        d = np.zeros(n)
+        for i in range(n):
+            gd = drop_rollout(g, i)
+            A_d, C_d, E_d, N_d = _group_parts(group_rewards(gd, cfg.m0, cfg, k, gate_S=1.0), cfg)
+            means_d = list(means)
+            means_d[gi] = np.pad(patient_mean(gd, k), (0, kmax - k))
+            M_d = cross_patient_information(means_d)
+            gates_d = _s_gate(E_tot - E_g + E_d, N_tot - N_g + N_d, cfg) * _m_gate(M_d, cfg)
+            d[i] = J - (A_tot - A_g + A_d + (C_tot - C_g + C_d) * gates_d)
+        credits.append(d)
+    return credits, res, M
+
+
+def team_credit_bruteforce(groups: list[PatientGroup], cfg: RewardConfig, K: int) -> list[np.ndarray]:
+    """Reference implementation (tests only): recompute the whole batch once per removed rollout."""
+    J = sum(float(gr.total.sum()) for gr in batch_rewards(groups, cfg, K)[0])
+    out = []
+    for gi, g in enumerate(groups):
+        n = len(g.q_x) + len(g.q_xp) + len(g.q_xm)
+        d = np.zeros(n)
+        for i in range(n):
+            alt = list(groups)
+            alt[gi] = drop_rollout(g, i)
+            d[i] = J - sum(float(gr.total.sum()) for gr in batch_rewards(alt, cfg, K)[0])
+        out.append(d)
+    return out
+
+
 def advantages(total: np.ndarray, normalize_std: bool = True, min_std: float = 1e-6,
                sizes: tuple[int, ...] | None = None) -> np.ndarray | None:
     """Group-relative advantages for one paired group. Returns None when the group carries no
