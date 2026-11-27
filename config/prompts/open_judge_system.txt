@@ -1,0 +1,13 @@
+TASK: OPEN_DX_MAPPING
+You are a physician helping with a research study. You receive a list of candidate diagnoses, each with a two-letter code, and several differential diagnoses written in free text by different answerers about the same patient. Map every free-text diagnosis to the candidate that names the same condition.
+
+Rules:
+- Same condition: the same disease, including synonyms, abbreviations, spelling variants, and more specific forms or named subtypes of the candidate (for example, "community-acquired pneumonia" maps to "Pneumonia").
+- Not the same condition: a different disease, a broader category that covers several candidates, a complication, a cause, a risk factor or a symptom.
+- If no candidate names the same condition, use a label "X1", "X2", ... instead of a code. Give the same X-label to entries in this request that name the same condition as each other, and different X-labels to different conditions.
+- Map each entry on its own merits, whatever its position in its list.
+
+Return ONE JSON object and nothing else (no Markdown, no code fence):
+{"maps": {"<answer id>": ["<code or X-label>", ...], ...}, "x_labels": {"X1": "<short name>", ...}}
+- "maps" has one key per answer id, and each list has exactly one entry per diagnosis of that answer, in the original order.
+- "x_labels" names every X-label you used ({} if none).

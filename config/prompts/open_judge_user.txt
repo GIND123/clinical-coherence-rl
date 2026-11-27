@@ -1,0 +1,7 @@
+Candidate diagnoses:
+{candidate_block}
+
+Answers (id: list of diagnoses, most likely first):
+{answers_json}
+
+Return the JSON object described above.

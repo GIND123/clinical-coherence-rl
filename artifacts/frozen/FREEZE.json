@@ -1,11 +1,11 @@
 {
-  "created_at": "2026-11-27T16:29:53-05:00",
-  "git_commit": "a23b4565cc3b1ffeaa9457a2f32992cc647ae88c",
+  "created_at": "2026-11-27T17:49:50-05:00",
+  "git_commit": "a2288c30f058cf6f744f4f7857c659a0122f9db3",
   "dry_run": false,
   "files": {
     "config/cues.yaml": "7f61d815b2ede741a3257dd78fda9fedc61ff6b82428bf9aa2b6abfa03efeb63",
     "config/cues_train.yaml": "9917a76b2f54bf85a1a8e380e2d893607d937deffbb5f1c4a3bc8d2c5df2f061",
-    "config/jobs.yaml": "855044bb970c5dad13bbbd8f438bbda4f709bdc1e70ae44a8368d22763b42f03",
+    "config/jobs.yaml": "93e4a3d521330a6378ec84ef19b54cb997ed9c76c13b21e6feb19961586165bb",
     "config/models.lock.yaml": "9352df66f7c0bade042cbf09bd429ab398d4c172fc0d9506c98fea0b8820a0f3",
     "config/models.yaml": "220dba02ace4d22748b834b2548869c36730a6ed23ce713ad82ca390aa849fd6",
     "config/prompts/contam_completion_system.txt": "3a4403b8d403bcf9c9947156a08b3e1c20d4ca9b3bb841fed964c9456dd3faa3",
@@ -13,6 +13,9 @@
     "config/prompts/contam_guided_user.txt": "7ea823ac2a8769691c14ca0cc03321acd430564af6571fc5289204ebadc2081f",
     "config/prompts/contam_id_user.txt": "ddbb5db48aa30f20ae43f9266e8e4c257af6cec33dfcb5f687b74d08be85767f",
     "config/prompts/contam_noid_user.txt": "30e5785c03d542d44eebef81107782975de4c30016313a148f50ae6541fd9f46",
+    "config/prompts/open_judge_system.txt": "e08a811f0d67b1627f35408269a85392b733a96e89d3c3f4c417b16731313067",
+    "config/prompts/open_judge_user.txt": "107f2a2c6e685a8df95ab88d8bd6af21a40320d420eb7d4412a74c061148bf8f",
+    "config/prompts/open_system.txt": "1289a0630fd835e6446ed488ce703f97eeb35d30f1033c543483248ef75c2df8",
     "config/prompts/posterior_system_case.txt": "86ad3e27eacfc8c221352b59f5c98732d948c94b1648ad488627207c78644371",
     "config/prompts/posterior_system_fixed.txt": "9e2233b8053efb3f9cbbd0a7844e5c8155ea5879d0817ca4c6c26bb06c83ed1f",
     "config/prompts/prep_fresh_cut_system.txt": "525e6c9f0b0c92f21404e16b4e22a13d5c9f1e9bfc4f2a0539e68cf099221e7c",
@@ -30,7 +33,7 @@
     "config/prompts/user_seq_first.txt": "af17e61d4f4d3af79f03694974ff590d2848f7137d8a5fd04de73941b757e76e",
     "config/prompts/user_seq_second.txt": "9a0c74d77b67bc2dcef06516d86c6121e71bb366af31c3e14a18644868ed5951",
     "config/prompts/user_single.txt": "0deb7d03285e6ed673d855c107ea910fe46b5852e2f12534e83bfb4bcb71cfd1",
-    "config/study.yaml": "9bb0a4efd6dfafa5ffee58a14f9e049b59e24f5a1c2fbaf001d239e5069b5491",
+    "config/study.yaml": "82dbebc3de0d75f27455724bebec69038e6b4e943053d2bfbb1b12b33266318d",
     "frozen/banks/ddx_phrasebank.json": "5e8c5553c8267f0e41b741c86c681694d964e456316711617924ae3d6ddea0e8",
     "frozen/banks/ddx_phrasebank_train.json": "76b778f0f70d79e0dea207b69fc98f21fcaad36cb2caf42cbceef1ad878e1839",
     "frozen/banks/phrasebank_review.csv": "c7d2edbc8372926750b7b14eaeeb68ff78581b5050fd455e95366fe7359254d9",
@@ -48,8 +51,8 @@
     "frozen/medcase/prepared.jsonl": "11bcbeca3aa9d2625833041db2a9323bef84e92fb10b2d9363fb2ba9ad2fe7eb"
   },
   "previous": {
-    "created_at": "2026-11-27T00:17:17-05:00",
-    "sha256": "51c85394fcb175cb5ca257609222eb99e33f627fae694a0356f2509aab59f089",
-    "file": "freeze_history/FREEZE-20261127T001717.json"
+    "created_at": "2026-11-27T16:29:53-05:00",
+    "sha256": "16a8b30949cd3f2fdda472dc99161e49fe0bce59c8db5be71fa35fef5cc37fd2",
+    "file": "freeze_history/FREEZE-20261127T162953.json"
   }
 }

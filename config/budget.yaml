@@ -13,9 +13,9 @@ credit_usd: 1100.00
 
 # Absolute cap across ALL jobs (prep + pilot + panel + arms). The remaining
 # $100 of credit is the reserve for Cost Explorer lag and price drift.
-hard_cap_usd: 760.00
-# 27 Nov 2026 (docs/plan_final.md §2): Amendments 2-3 may spend at most $200 on top of the
-# $561.55 already spent, so the hard cap is $760 (was $1,000).
+hard_cap_usd: 911.00
+# 27 Nov 2026: Amendments 2, 3 and 6 may spend at most $350 on top of the $561.55 already spent
+# (docs/amendment_6.md), so the hard cap is $911 (was $1,000; briefly $760 under Amendment 5).
 
 # A job of priority C (optional, exploratory) may start only if total
 # committed spend is at or below this when it is launched.
@@ -47,6 +47,11 @@ job_caps_usd:
   prep_fresh_extract: 16.00      # <= 238 Kimi K3 calls, expected ~$12 (cap was $40)
   prep_fresh_verify: 5.00        # GLM-5
   fresh_panel: 70.00             # up to 150 passing cases x 10 calls x 6 models, ~$0.40/case (cap was $130)
+  # Amendment 6 (2026-11-27): open-ended format arm, its two judges, and the drift retest
+  openended: 110.00              # ~525 cases x 4 renderings x 6 models; expected ~$85 (Kimi K3 ~90%)
+  openended_t0: 12.00            # same at temperature 0, 5 models; expected ~$5
+  openended_judge: 20.00         # 2 judges x one call per case x model x decoding; expected ~$6
+  drift: 18.00                   # core 150 x (base, retest) x 6 models; expected ~$12
 
 # Disk: a paid job refuses to start with less free space than this on the
 # disk holding runs/, and only the newest `keep_backups` ledger backups are

@@ -144,3 +144,20 @@ jobs:
     models: panel
     efforts: [default]
     requires_completed: [panel_main]
+
+  # ------------------------------------------------------------------------
+  # Amendment 6 (2026-11-27; docs/amendment_6.md): temporal reproducibility.
+  # The identical base and retest requests of the 150 core cases, re-sent about
+  # three weeks after panel_main under a new job name (new request IDs). It shows
+  # whether accuracy and flip rates are stable over time on the same Bedrock
+  # model IDs. The open-ended format arm of Amendment 6 is not item-based; it is
+  # defined in ccrl/panel/openended.py (`ccrl openended`).
+  # ------------------------------------------------------------------------
+  drift:
+    priority: B
+    description: temporal reproducibility - core 150 (75 + 75) x (base, retest) x 6 panel models, ~3 weeks after panel_main
+    item_set: core
+    transform_set: base_retest
+    models: panel
+    efforts: [default]
+    requires_completed: [panel_main]

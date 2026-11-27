@@ -1,7 +1,7 @@
 # Final plan: methodology and budget (27 Nov 2026)
 
 Two papers from one study, as before. This plan sets what each paper claims, the experiments
-that test those claims, and what fits in **up to $200 of Bedrock and $100 of Lambda**. The
+that test those claims, and what fits in **up to $350 of Bedrock and $100 of Lambda**. The
 Lambda $100 includes the $18 already spent on 26–27 Nov, so $82 is left. More GPU money follows
 only if stage A works (§3.5). Where this plan differs from [papers.md](papers.md), it replaces it.
 
@@ -17,12 +17,12 @@ the runs it affects, so the registration can be brought up to date in one step l
 | question | Is an open-weight model's differential a stable, evidence-driven belief? | How do you train a model to be consistent without making it uninformative? |
 | data | Bedrock panel (6 models), DDXPlus + MedCaseReasoning + post-freeze case reports | Qwen3-4B trained with GRPO on DDXPlus; same frozen items for evaluation |
 | status | main and secondary arms done ($560); Amendments 2–3 not yet run | diagnosis, fix and CPU audit done (Amendment 4); no successful training run yet |
-| money | Bedrock up to $200 (§2) | Lambda $82 left of $100 (§3); more if stage A works |
+| money | Bedrock up to $350 (§2) | Lambda $82 left of $100 (§3); more if stage A works |
 | target | npj Digital Medicine / JAMIA | TNNLS (31 Mar 2027), NeurIPS 2027 |
 
 ---
 
-## 2. Paper 1 on Bedrock (up to $200)
+## 2. Paper 1 on Bedrock (up to $350)
 
 ### What it buys
 
@@ -38,12 +38,21 @@ each of the other five models), so a cap can only shorten its share.
 | 3 | `prep_fresh_extract` + `verify` | Kimi K3, GLM-5 | passing cases | ~$13 | $16 + $5 |
 | 4 | `fresh_panel` | all 6 | up to 150 passing cases × 10 calls | ~$60 | $70 |
 | 5 | `contamination` | all 6 | 300 real cases × 4 probes | ~$40 | $70 |
+| 6 | `openended` + `openended_t0` (**Amendment 6**) | 6 / 5 | the same vignettes, free-text five-item differential, no candidate list and no probabilities; 75 DDXPlus + 300 MedCaseReasoning + all post-freeze cases × 4 renderings | ~$90 | $110 + $12 |
+| 7 | `openended_judge` | GLM-5, DeepSeek V3.2 | blind mapping of every free-text diagnosis to candidate codes | ~$8 | $20 |
+| 8 | `drift` | all 6 | core 150 × (base, retest), about three weeks after the panel | ~$12 | $18 |
 
-- **Expected total:** about $150. The **hard cap is $760**: the $561.55 already spent plus $200
-  (`config/budget.yaml`). It binds before any combination of job caps can exceed $200.
+- **Why jobs 6–8 ([amendment_6.md](amendment_6.md)).** Bedrock calls end on 18 Dec, so anything a
+  reviewer could ask that needs a call must run now.
+  - Jobs 6–7 answer "is the instability an artefact of asking for probabilities over a given
+    list?", in the format a clinician would use.
+  - Job 8 answers "is it stable over time?".
+- **Expected total:** about $260. The **hard cap is $911**: the $561.55 already spent plus $350
+  (`config/budget.yaml`). The registered jobs 1–5 run first, so a cap can only shorten jobs 6–8.
+- **One command** runs everything in this order unattended: `bash scripts/final_bedrock.sh start`.
 - **Deadlines:** everything finishes by 18 Dec 2026, the last day for paid calls. None of it
   blocks the GPU work any more.
-- **Dated record:** [amendment_5.md](amendment_5.md) §A.
+- **Dated records:** [amendment_5.md](amendment_5.md) §A and [amendment_6.md](amendment_6.md).
 
 ### What Paper 1 then claims
 
@@ -227,6 +236,7 @@ is asked for. If stage A works, these are added, in order of what each adds to t
 
 | order | runs | cost | what it adds |
 |---|---|---|---|
+| B0 | real-case pair `ccr_mcr` + `rlvr_mcr` (2,000 labelled MedCaseReasoning training cases), if stage A's budget guard did not already run it | ~$22 | answers "trained only on synthetic data" (Amendment 6 §3) |
 | B1 | CCR + RLVR seed 2 | ~$21–23 | three seeds, the usual minimum for a training claim |
 | B2 | Qwen3-8B, CCR + RLVR, 2 seeds (measures its own τ_I first) | ~$90 | scale; H6 (a trained 8B model against the untrained 32B and the panel) |
 | B3 | a second model family at about 4B, CCR + RLVR, 1 seed | ~$40 | the result is not specific to Qwen |

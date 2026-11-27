@@ -220,6 +220,20 @@ def cmd_contamination(a) -> int:
     return 0
 
 
+def cmd_openended(a) -> int:
+    from ccrl.panel import openended as O
+    ws = get_ws(a.dry_run)
+    if a.action == "plan":
+        O.plan(ws, _csv(a.models), a.limit_cases)
+    elif a.action == "run":
+        print(json.dumps(O.run(ws, _csv(a.models), a.limit_cases, a.max_spend, a.profile), default=str))
+    elif a.action == "judge":
+        print(json.dumps(O.judge(ws, a.limit_cases, a.max_spend, a.profile), default=str))
+    else:
+        print(f"open-ended tables written to {O.analyze(ws)}")
+    return 0
+
+
 def cmd_analyze(a) -> int:
     from ccrl.analysis import report
     out = report.run(get_ws(a.dry_run), jobs=_csv(a.jobs))
@@ -279,6 +293,14 @@ def cmd_rehearse(a) -> int:
     step("contamination probe (limited)", lambda: contamination.run(ws, limit_cases=max(2, n // 4)))
     step("fresh real cases (limited)", lambda: fresh.run(ws, limit=6))
     step("fresh rerun (must be a no-op)", lambda: _assert_noop(fresh.run(ws, limit=6)))
+    from ccrl.panel import openended
+    step("run drift (limited)", lambda: jobs.run_job("drift", ws, limit_cases=max(2, n // 4), force_order=True))
+    step("open-ended format (limited)", lambda: openended.run(ws, limit_cases=max(3, n // 4)))
+    step("open-ended judge (limited)", lambda: openended.judge(ws, limit_cases=max(3, n // 4)))
+    step("open-ended rerun (must be a no-op)", lambda: [_assert_noop(v) for v in
+                                                        openended.run(ws, limit_cases=max(3, n // 4)).values()])
+    step("open-ended judge rerun (must be a no-op)",
+         lambda: _assert_noop(openended.judge(ws, limit_cases=max(3, n // 4))))
     step("contamination rerun (must be a no-op)",
          lambda: _assert_noop(contamination.run(ws, limit_cases=max(2, n // 4))))
     step("queue rerun (must be a no-op)", lambda: cmd_queue(argparse.Namespace(
@@ -288,6 +310,7 @@ def cmd_rehearse(a) -> int:
     step("status", lambda: print(qa.status(ws)))
     step("analyze", lambda: report.run(ws))
     step("contamination analyze", lambda: contamination.analyze(ws))
+    step("open-ended analyze", lambda: openended.analyze(ws))
     step("archive pack", lambda: export.pack(ws))
     print(f"\nREHEARSAL PASSED ({len(steps)} steps). Everything is under {dry} — delete it any time.")
     return 0
@@ -386,6 +409,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--limit-cases", type=int, default=None, help="only the first N cases (testing)")
     s.add_argument("--max-spend", type=float, default=None, help="extra USD cap for this invocation")
     s.set_defaults(fn=cmd_contamination)
+
+    s = sub.add_parser("openended", help="Amendment 6: open-ended differential format (+ two-judge mapping)")
+    s.add_argument("action", choices=["plan", "run", "judge", "analyze"])
+    s.add_argument("--models", help="restrict generation to these registry keys")
+    s.add_argument("--limit-cases", type=int, default=None, help="only a few cases per source (testing)")
+    s.add_argument("--max-spend", type=float, default=None, help="extra USD cap for this invocation")
+    s.set_defaults(fn=cmd_openended)
 
     s = sub.add_parser("analyze", help="offline estimands, tables and figures")
     s.add_argument("--jobs", help="comma-separated jobs (default: all panel jobs present)")

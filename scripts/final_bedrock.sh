@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# The last Bedrock runs (docs/amendment_5.md §A; RUNBOOK §8b-8c), in the planned order, unattended:
-#   1. temperature 0 on the full panel and the replication sample (5 models)
-#   2. post-freeze real case reports: preparation, then the 6-model panel
-#   3. the contamination probe, last (Kimi K3 is most of its cost)
-#   4. export and pack the archive
-# Spend is capped by config/budget.yaml: at most $200 on top of the $561.55 already spent.
+# The last Bedrock runs (docs/amendment_5.md §A, docs/amendment_6.md; RUNBOOK §8b-8d), in order, unattended:
+#   1. temperature 0 on the full panel and the replication sample (5 models)          Amendment 2
+#   2. post-freeze real case reports: preparation, then the 6-model panel             Amendment 3
+#   3. the contamination probe (Kimi K3 is most of its cost)                          Amendment 2
+#   4. open-ended differential format, default decoding and temperature 0             Amendment 6
+#   5. the two judges that map the open-ended answers to candidate codes              Amendment 6
+#   6. drift: the core base/retest requests re-sent ~3 weeks after the panel          Amendment 6
+#   7. export and pack the archive
+# Registered arms (1-3) run before the new ones, so a cap can only shorten the newest work.
+# Spend is capped by config/budget.yaml: at most $350 on top of the $561.55 already spent.
 # Each step resumes where it stopped; finished calls are never sent again, so rerunning is safe.
 #
 #   git pull && bash scripts/final_bedrock.sh start      # starts detached, survives a closed terminal
@@ -25,7 +29,7 @@ fi
 echo "=== start $(date)"
 ccrl freeze --check || { echo "STOP: freeze check failed. Run 'git pull' first, then rerun."; exit 1; }
 ccrl status
-for step in "queue temp0_panel temp0_ext" "fresh run" "contamination run"; do
+for step in "queue temp0_panel temp0_ext" "fresh run" "contamination run" "openended run" "openended judge"             "queue drift"; do
   echo "=== ccrl $step   $(date)"
   ccrl $step || echo "!!! 'ccrl $step' exited with code $? - continuing; rerun this script later to resume it"
 done

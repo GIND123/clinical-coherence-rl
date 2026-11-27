@@ -314,22 +314,24 @@ Without push access, zip `config/models.lock.yaml` and the whole
 
 ---
 
-> **Order and ceiling (27 Nov 2026, docs/amendment_5.md §A).** Run these in this order:
+> **Order and ceiling (27 Nov 2026, docs/amendment_5.md §A and docs/amendment_6.md).** Run these in
+> this order:
 >
 > 1. the 8b temperature 0 queue;
 > 2. all of 8c (`fresh run`);
-> 3. the 8b `contamination run`, **last**.
+> 3. the 8b `contamination run`;
+> 4. Amendment 6: `openended run`, `openended judge`, `queue drift`.
 >
-> Together they may spend at most **$200** on top of the $561.55 already spent: `config/budget.yaml`
-> now sets the hard cap to $760, with tighter job caps. Kimi K3 is most of the contamination cost, so
-> running it last means a cap can only shorten the probe.
+> Together they may spend at most **$350** on top of the $561.55 already spent: `config/budget.yaml`
+> sets the hard cap to $911, with a cap per job. The registered arms run first, so a cap can only
+> shorten the newest work.
 >
 > **One command does all three in this order, then exports and packs:**
 > `git pull && bash scripts/final_bedrock.sh start`. Watch it with
 > `tail -f runs/logs/final_bedrock.log`.
 >
-> `ccrl freeze --check` now lists **43 files**. The two new ones are training-only banks that no
-> Bedrock job reads.
+> `ccrl freeze --check` now lists **46 files**: the two training-only banks of Amendment 5 and the
+> three open-ended prompts of Amendment 6.
 
 ## 8b. Amendment 2: temperature 0 at full scale and a contamination probe (≈ $66, before 18 Dec)
 
@@ -339,7 +341,7 @@ $244. This is well inside the remaining hard-cap headroom.
 ```bash
 cd clinical-coherence-rl && source .venv/bin/activate
 git pull
-ccrl freeze --check            # must print OK (43 files, frozen 2026-11-27...)
+ccrl freeze --check            # must print OK (46 files, frozen 2026-11-27...)
 ccrl status                    # committed about $561.55
 ccrl plan | grep temp0_        # temp0_panel ~$17, temp0_ext ~$9 expected
 ccrl contamination plan        # ~$40 expected (Kimi K3 is most of it)
@@ -384,7 +386,7 @@ Run it **after** 8b has finished (it can also run on its own):
 ```bash
 cd clinical-coherence-rl && source .venv/bin/activate
 git pull
-ccrl freeze --check            # OK (43 files)
+ccrl freeze --check            # OK (46 files)
 ccrl fresh plan                # ~238 reports; expected total about $76
 bash scripts/run_detached.sh fresh run
 tail -f runs/logs/ccrl-fresh-run-*.log

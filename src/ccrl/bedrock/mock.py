@@ -72,6 +72,13 @@ class MockBedrock:
             n = len(re.findall(r"(?m)^\d+\. ", user_turns[-1]))
             text = json.dumps({"single_patient": True, "final_diagnosis": "Zebra fever", "diagnostic_case": True,
                                "last_sentence": max(0, n - 2), "reason": "mock"})
+        elif "TASK: OPEN_DX_MAPPING" in system:
+            text = self._open_judge(user_turns[-1])
+        elif '"differential"' in system:
+            pool = ["Pneumonia", "Acute bronchitis", "Pulmonary embolism", "Myocarditis", "Zebra fever",
+                    "Influenza", "Sarcoidosis", "Gastroesophageal reflux disease", "Panic attack", "Anemia"]
+            pick = rng.permutation(len(pool))[:5]
+            text = json.dumps({"differential": [pool[i] for i in pick]})
         elif "TASK: CASE_COMPLETION" in system:
             last = [s for s in _SENT.split(user_turns[-1]) if s.strip()][-1]
             text = "The patient was observed closely. " + last + " Further tests followed over the next days."
@@ -129,6 +136,17 @@ class MockBedrock:
             findings[0]["stage"] = 0
         return json.dumps({"patient": "an adult patient", "findings": findings, "final_diagnosis": dx,
                            "distractors": [f"Alternative condition {k + 1}" for k in range(9)]})
+
+    @staticmethod
+    def _open_judge(user: str) -> str:
+        cands = dict((ln[4:].strip().lower(), ln[:2]) for ln in
+                     user.split("Candidate diagnoses:\n", 1)[1].split("\n\nAnswers", 1)[0].splitlines() if ln.strip())
+        answers = json.loads(user.split("most likely first):\n", 1)[1].rsplit("\n\nReturn", 1)[0])
+        xs: dict[str, str] = {}
+        maps = {}
+        for aid, dx in answers.items():
+            maps[aid] = [cands.get(d.lower()) or xs.setdefault(d.lower(), f"X{len(xs) + 1}") for d in dx]
+        return json.dumps({"maps": maps, "x_labels": {v: k for k, v in xs.items()}})
 
     def _posterior(self, system: str, user_turns: list[str], model: str, rng: np.random.Generator) -> str:
         block = system + "\n" + user_turns[0]
