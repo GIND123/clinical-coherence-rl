@@ -1,9 +1,10 @@
 {
-  "created_at": "2026-11-27T00:17:17-05:00",
-  "git_commit": "81b655b1957da89d6fc81f9e7771f893bfc9c362",
+  "created_at": "2026-11-27T16:29:53-05:00",
+  "git_commit": "a23b4565cc3b1ffeaa9457a2f32992cc647ae88c",
   "dry_run": false,
   "files": {
     "config/cues.yaml": "7f61d815b2ede741a3257dd78fda9fedc61ff6b82428bf9aa2b6abfa03efeb63",
+    "config/cues_train.yaml": "9917a76b2f54bf85a1a8e380e2d893607d937deffbb5f1c4a3bc8d2c5df2f061",
     "config/jobs.yaml": "855044bb970c5dad13bbbd8f438bbda4f709bdc1e70ae44a8368d22763b42f03",
     "config/models.lock.yaml": "9352df66f7c0bade042cbf09bd429ab398d4c172fc0d9506c98fea0b8820a0f3",
     "config/models.yaml": "220dba02ace4d22748b834b2548869c36730a6ed23ce713ad82ca390aa849fd6",
@@ -31,6 +32,7 @@
     "config/prompts/user_single.txt": "0deb7d03285e6ed673d855c107ea910fe46b5852e2f12534e83bfb4bcb71cfd1",
     "config/study.yaml": "9bb0a4efd6dfafa5ffee58a14f9e049b59e24f5a1c2fbaf001d239e5069b5491",
     "frozen/banks/ddx_phrasebank.json": "5e8c5553c8267f0e41b741c86c681694d964e456316711617924ae3d6ddea0e8",
+    "frozen/banks/ddx_phrasebank_train.json": "76b778f0f70d79e0dea207b69fc98f21fcaad36cb2caf42cbceef1ad878e1839",
     "frozen/banks/phrasebank_review.csv": "c7d2edbc8372926750b7b14eaeeb68ff78581b5050fd455e95366fe7359254d9",
     "frozen/ddxplus/build_report.json": "49af3db4b02e2b1c68c65142438cc99f410fc11b336a6510811ffdbf8c0d6da4",
     "frozen/ddxplus/cases.jsonl": "b0ab5af82f11957a1f3922ca5161ae2895aad35c23bef5f4885ba38746588cab",
@@ -46,8 +48,8 @@
     "frozen/medcase/prepared.jsonl": "11bcbeca3aa9d2625833041db2a9323bef84e92fb10b2d9363fb2ba9ad2fe7eb"
   },
   "previous": {
-    "created_at": "2026-11-26T17:41:28-05:00",
-    "sha256": "0327bd84632b9f04a50cc8eecd5fcd85ec00e0725cc5e69550e87e4b19770b80",
-    "file": "freeze_history/FREEZE-20261126T174128.json"
+    "created_at": "2026-11-27T00:17:17-05:00",
+    "sha256": "51c85394fcb175cb5ca257609222eb99e33f627fae694a0356f2509aab59f089",
+    "file": "freeze_history/FREEZE-20261127T001717.json"
   }
 }

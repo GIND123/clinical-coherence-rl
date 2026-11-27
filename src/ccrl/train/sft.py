@@ -9,6 +9,10 @@ Targets (the assistant turn is the posterior JSON in the panel's schema):
   bct          bias-augmented consistency training, posterior version: the
                model's OWN answer on the clean rendering x becomes the target
                for a transformed rendering T(x) (Chua et al.; Irpan et al.)
+  selfcons     self-consistency distillation (label-free; plan_final.md §3.2): the
+               mean of the base model's answers on 8 renderings of a patient (4 clean
+               orders, 4 nuisance transforms) is the target for 2 clean and 2
+               transformed renderings
 Loss is on the assistant tokens only (prompt masked).
 """
 from __future__ import annotations
@@ -119,23 +123,66 @@ def train_sft(cfg: dict[str, Any], examples: list[list[dict]]) -> Path:
     return d
 
 
-def bct_examples(cfg: dict, sampler: PairedSampler, n: int) -> list[list[dict]]:
-    """Targets = the BASE model's own (greedy-free, temperature 0.7) answer on the
-    clean rendering x, attached to the transformed rendering x' (BCT)."""
-    from ccrl.prompts.parse import parse_posterior
-    from ccrl.train.grpo import HFGenerator
+def base_answers(cfg: dict, convs: list[list[dict]], temperature: float = 0.7, top_p: float = 0.95) -> list[str]:
+    """The untrained model's answers (registered decoding). vLLM when the config's generation
+    backend is vllm (put to sleep afterwards, so SFT gets the memory); transformers otherwise."""
+    kw = cfg.get("chat_template_kwargs", {"enable_thinking": False})
+    gen_cfg = cfg.get("generation") or {}
+    seed = int(cfg.get("seed", 0))
+    if gen_cfg.get("backend", "hf") == "vllm":
+        from transformers import AutoTokenizer
 
+        from ccrl.train.vllm_backend import VLLMEngine
+        tok = AutoTokenizer.from_pretrained(cfg["model"])
+        eng = VLLMEngine(cfg["model"], max_new_tokens=512, temperature=temperature, top_p=top_p,
+                         gpu_memory_utilization=float(gen_cfg.get("gpu_memory_utilization", 0.3)),
+                         max_model_len=int(gen_cfg.get("max_model_len", 4096)), enable_sleep=True, seed=seed)
+        outs = eng.generate([encode_chat(tok, c, kw) for c in convs],
+                            seeds=[seed * 1000003 + i for i in range(len(convs))], logprobs=False)
+        eng.sleep()
+        return [t for _ids, t, _lp in outs]
+    from ccrl.train.grpo import HFGenerator
     model, tok = load_model_and_tokenizer({**cfg, "init_adapter": None}, trainable=False)
-    gen = HFGenerator(model, tok, 512, 0.7, 0.95, 16, cfg.get("chat_template_kwargs", {"enable_thinking": False}))
-    groups = sampler.sample(n, 1, 1)
-    outs = gen([[{"role": "system", "content": g.system}, {"role": "user", "content": g.x[0]}] for g in groups])
+    outs = HFGenerator(model, tok, 512, temperature, top_p, 16, kw)(convs)
+    del model
+    return [t for _p, _c, t, _l in outs]
+
+
+def selfcons_examples(cfg: dict, sampler: PairedSampler, n_patients: int, k_clean: int = 4,
+                      k_nuisance: int = 4, min_valid: int = 4) -> list[list[dict]]:
+    """Self-consistency distillation: target = mean of the base model's informative answers over
+    the patient's renderings (needs at least `min_valid` of them)."""
+    from ccrl.prompts.parse import parse_posterior
+
+    pats = sampler.renderings(n_patients, k_clean, k_nuisance)
+    convs = [[{"role": "system", "content": sy}, {"role": "user", "content": u}] for sy, _c, us in pats for u in us]
+    texts = iter(base_answers(cfg, convs))
     ex = []
-    for g, (_p, _c, text, _l) in zip(groups, outs):
+    for sy, codes, us in pats:
+        vecs = [r.vector for r in (parse_posterior(next(texts), codes) for _ in us) if r.ok and r.informative]
+        if len(vecs) < min_valid:
+            continue
+        target = posterior_json(codes, np.mean(vecs, 0))
+        for u in us[:2] + us[k_clean:k_clean + 2]:
+            ex.append([{"role": "system", "content": sy}, {"role": "user", "content": u},
+                       {"role": "assistant", "content": target}])
+    return ex
+
+
+def bct_examples(cfg: dict, sampler: PairedSampler, n: int) -> list[list[dict]]:
+    """Targets = the BASE model's own (temperature 0.7) answer on the clean rendering x,
+    attached to x and to the transformed rendering x' (BCT)."""
+    from ccrl.prompts.parse import parse_posterior
+
+    groups = sampler.sample(n, 1, 1)
+    texts = base_answers(cfg, [[{"role": "system", "content": g.system}, {"role": "user", "content": g.x[0]}]
+                               for g in groups])
+    ex = []
+    for g, text in zip(groups, texts):
         r = parse_posterior(text, g.codes)
         if r.ok and r.informative:
             target = posterior_json(g.codes, r.vector)
             for u in (g.x[0], g.xp[0]):
                 ex.append([{"role": "system", "content": g.system}, {"role": "user", "content": u},
                            {"role": "assistant", "content": target}])
-    del model
     return ex

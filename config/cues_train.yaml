@@ -1,0 +1,55 @@
+# =============================================================================
+# Training-only irrelevant cues (plan_final.md P2, 27 Nov 2026).
+#
+# The panel's 40 irrelevant cues (config/cues.yaml) are the TEST cues and are never shown to a
+# model during training. Training uses these 40 instead. They follow the same rules and pass the
+# same lint (tests/test_cues.py):
+#   * setting-neutral (fits an outpatient visit and an inpatient case report);
+#   * about documentation, administration, the room or the clinician; never the patient's
+#     exposures, habits, occupation, travel, diet, animals, plants, weather, season, exertion,
+#     emotions or contacts;
+#   * never mentions any candidate diagnosis;
+#   * no sentence repeats a test cue (checked by the test).
+# =============================================================================
+
+irrelevant:
+  - {id: T01, text: "The form used for this encounter was revised two years ago."}
+  - {id: T02, text: "A printer in the corridor was out of toner that morning."}
+  - {id: T03, text: "The clinician's badge photograph was taken several years earlier."}
+  - {id: T04, text: "The appointment was booked through the online portal."}
+  - {id: T05, text: "The window blinds in the consulting room are beige."}
+  - {id: T06, text: "The note was checked for typographical errors before it was filed."}
+  - {id: T07, text: "The waiting area has a water dispenser near the door."}
+  - {id: T08, text: "The clinician keeps a small calendar on the desk."}
+  - {id: T09, text: "The encounter was assigned an internal tracking code."}
+  - {id: T10, text: "The lift in the building was serviced last month."}
+  - {id: T11, text: "The clinician who documented this visit enjoys solving crossword puzzles."}
+  - {id: T12, text: "The consulting room has a whiteboard that had been wiped clean."}
+  - {id: T13, text: "The intake clipboard was a different colour from the usual one."}
+  - {id: T14, text: "The note was saved twice because the first attempt timed out."}
+  - {id: T15, text: "A new coat rack was installed in the reception area."}
+  - {id: T16, text: "The clinician's computer monitor was recently replaced with a larger one."}
+  - {id: T17, text: "The record was later archived under the standard retention policy."}
+  - {id: T18, text: "The clinician who documented this visit owns a collection of vinyl records."}
+  - {id: T19, text: "The reception desk has a bowl of paper clips."}
+  - {id: T20, text: "The building's opening hours are posted on the main door."}
+  - {id: T21, text: "The consultation was entered under the correct date in the system."}
+  - {id: T22, text: "The keyboard used to type the note has a missing key cap."}
+  - {id: T23, text: "The clinician who documented this visit learned to juggle as a teenager."}
+  - {id: T24, text: "A box of spare printer paper was stored under the desk."}
+  - {id: T25, text: "The note template includes a field for the clinician's extension number."}
+  - {id: T26, text: "The corridor outside the room is carpeted in grey."}
+  - {id: T27, text: "The clinician who documented this visit is a fan of science-fiction novels."}
+  - {id: T28, text: "The encounter number was printed on a barcode label."}
+  - {id: T29, text: "The ceiling of the room has square acoustic tiles."}
+  - {id: T30, text: "The scheduling software sends automatic reminder messages."}
+  - {id: T31, text: "The clinician typed the note using British English spelling."}
+  - {id: T32, text: "The visitor log at the entrance is kept in a bound notebook."}
+  - {id: T33, text: "The clinician who documented this visit has a library card from a neighbouring town."}
+  - {id: T34, text: "A spare chair had been brought into the room from the corridor."}
+  - {id: T35, text: "The document header shows the institution's postal address."}
+  - {id: T36, text: "The clinician's desk lamp has a dimmer switch."}
+  - {id: T37, text: "The note was filed in the record within an hour of the visit."}
+  - {id: T38, text: "The clinician who documented this visit recently started learning the guitar."}
+  - {id: T39, text: "The leaflet rack near the door was restocked."}
+  - {id: T40, text: "The room number is displayed on a small sign beside the door."}

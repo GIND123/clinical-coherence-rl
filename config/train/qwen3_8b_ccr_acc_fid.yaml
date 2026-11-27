@@ -1,2 +1,3 @@
 base: base.yaml
 model: Qwen/Qwen3-8B
+shared_micro_batch_tokens: 4096

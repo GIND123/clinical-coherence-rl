@@ -61,6 +61,12 @@ def build_pool(n: int = 60000, seed: int | None = None) -> str:
     return str(dest)
 
 
+def _repo_path(p: str):
+    from pathlib import Path
+    q = Path(p)
+    return q if q.is_absolute() else paths.ROOT / q
+
+
 @dataclass
 class GroupPrompts:
     case: PreparedCase
@@ -77,8 +83,13 @@ class GroupPrompts:
 class PairedSampler:
     def __init__(self, dataset: str, seed: int, transforms: dict[str, float] | None = None,
                  contrast: str = "triage", label_free: bool = False, pool_path: str | None = None,
-                 phrasebank_path: str | None = None):
+                 phrasebank_path: str | None = None, cue_bank: str = "panel"):
+        """cue_bank / phrasebank_path: "panel" uses the test banks (registered); training configs
+        set cue_bank "train" and the training phrase bank (plan_final.md P2)."""
         self.dataset = dataset
+        if cue_bank not in ("panel", "train"):
+            raise ValueError(f"cue_bank {cue_bank!r} (panel | train)")
+        self.cue_bank = (config.cues_train() if cue_bank == "train" else config.cues())["irrelevant"]
         self.r = random.Random(seed)
         self.seed = seed
         self.contrast = contrast
@@ -87,7 +98,7 @@ class PairedSampler:
         self.transforms = [t for t, w in tw.items() if w > 0]
         self.weights = [tw[t] for t in self.transforms]
         pb = load_phrasebank(paths.FROZEN_BANKS / "ddx_phrasebank.json") if phrasebank_path is None \
-            else load_phrasebank(__import__("pathlib").Path(phrasebank_path))
+            else load_phrasebank(_repo_path(phrasebank_path))
         if pb is None and "para" in self.transforms:
             i = self.transforms.index("para")
             self.transforms.pop(i)
@@ -133,7 +144,7 @@ class PairedSampler:
             pos = self.r.choice(list(range(i + 1, len(o))) or [i])
             return T.user_prompt(I.render(case, o, inserts=[(pos, I.dup_sentence(o[i].base))]), user_c)
         if transform == "cue":
-            bank = [c for c in config.cues()["irrelevant"] if I.cue_ok(c["text"], case.candidates)]
+            bank = [c for c in self.cue_bank if I.cue_ok(c["text"], case.candidates)]
             cue = self.r.choice(bank)
             return T.user_prompt(I.render(case, o, inserts=[(self.r.randrange(len(o)), cue["text"])]), user_c)
         raise ValueError(transform)
@@ -149,6 +160,18 @@ class PairedSampler:
             keep = [f for f in o if f.fid != drop]
         removed = [t for f in case.findings if f not in keep for t in f.meta.get("tokens", [])]
         return T.user_prompt(I.render(case, keep), user_c), removed
+
+    def renderings(self, n_patients: int, k_clean: int, k_nuisance: int) -> list[tuple[str, list[str], list[str]]]:
+        """(system, candidate codes, renderings) per patient: k_clean clean renderings (each its own
+        random order) then k_nuisance transformed ones (random training transform each)."""
+        out = []
+        for _ in range(n_patients):
+            case = self.make(self._next())
+            texts = [self._render(case, "x", None) for _ in range(k_clean)]
+            texts += [self._render(case, "xp", self.r.choices(self.transforms, self.weights)[0])
+                      for _ in range(k_nuisance)]
+            out.append((self.system, list(case.codes), texts))
+        return out
 
     def sample(self, n_patients: int, G: int, H: int) -> list[GroupPrompts]:
         out = []

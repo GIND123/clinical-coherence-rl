@@ -42,7 +42,8 @@ from ccrl.prompts.parse import parse_posterior
 from ccrl.reward.coherence import (PatientGroup, RewardConfig, advantages, batch_rewards, cross_patient_information,
                                    patient_mean, team_credit)
 from ccrl.train.common import (JsonlLogger, Sample, completion_logprobs_lowmem, encode_chat, load_model_and_tokenizer,
-                               lr_lambda, set_seed, token_budget_batches)
+                               lr_lambda, set_seed, shared_prompt_batches, shared_prompt_logprobs,
+                               token_budget_batches)
 from ccrl.train.data import PairedSampler
 
 
@@ -120,15 +121,17 @@ def readout_valid(res, strict_sum: bool, sum_tol: float) -> bool:
 
 # --------------------------------------------------------------------- loss
 def pg_kl_loss(model, samples: list[Sample], pad_id: int, n_tok_total: int, kl_coef: float, chunk: int,
-               tis_cap: float | None = None):
-    """On-policy PG (ratio = 1 with gradient) + k3 KL to the adapter-disabled reference."""
+               tis_cap: float | None = None, shared_prompt: bool = False):
+    """On-policy PG (ratio = 1 with gradient) + k3 KL to the adapter-disabled reference.
+    shared_prompt: run each distinct prompt once (same result; plan_final.md P1)."""
     import torch
 
-    lps, ents = completion_logprobs_lowmem(model, samples, pad_id, chunk)
+    fn = shared_prompt_logprobs if shared_prompt else completion_logprobs_lowmem
+    lps, ents = fn(model, samples, pad_id, chunk)
     ref = None
     if kl_coef > 0:
         with torch.no_grad(), model.disable_adapter():
-            ref, _ = completion_logprobs_lowmem(model, samples, pad_id, chunk)
+            ref, _ = fn(model, samples, pad_id, chunk)
     total = 0.0
     st = {"entropy_sum": 0.0, "kl_sum": 0.0, "tis_w_sum": 0.0, "tis_n": 0.0}
     for k, (s, lp, ent) in enumerate(zip(samples, lps, ents)):
@@ -170,7 +173,7 @@ def train(cfg: dict[str, Any]) -> Path:
     steps = int(cfg.get("steps", 300))
     sampler = PairedSampler(cfg.get("dataset", "ddxplus"), seed, cfg.get("transforms"),
                             cfg.get("contrast", "triage"), bool(cfg.get("label_free", False)),
-                            cfg.get("pool_path"), cfg.get("phrasebank_path"))
+                            cfg.get("pool_path"), cfg.get("phrasebank_path"), cfg.get("cue_bank", "panel"))
     gen_cfg = cfg.get("generation", {})
     backend = gen_cfg.get("backend", "hf")
     chat_kw = cfg.get("chat_template_kwargs", {"enable_thinking": False})
@@ -190,6 +193,8 @@ def train(cfg: dict[str, Any]) -> Path:
                             eos_token_ids=[eos] if eos is not None else None)
     elif backend != "hf":
         raise SystemExit(f"unknown generation.backend {backend!r} (hf | vllm)")
+    if cfg.get("shared_prompt") and cfg.get("gradient_checkpointing", True):
+        raise SystemExit("shared_prompt needs gradient_checkpointing: false")
     model, tok = load_model_and_tokenizer(cfg, trainable=True)
     pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
     if engine is not None:
@@ -291,10 +296,13 @@ def train(cfg: dict[str, Any]) -> Path:
         n_tok = sum(len(s.completion_ids) for s in samples)
         if samples:
             model.train()
-            for mb in token_budget_batches(samples, int(cfg.get("micro_batch_tokens", 16384)),
-                                           int(cfg.get("micro_batch_max_samples", 8))):
+            shared = bool(cfg.get("shared_prompt", False))
+            mbs = (shared_prompt_batches(samples, int(cfg.get("shared_micro_batch_tokens", 8192))) if shared else
+                   token_budget_batches(samples, int(cfg.get("micro_batch_tokens", 16384)),
+                                        int(cfg.get("micro_batch_max_samples", 8))))
+            for mb in mbs:
                 loss, st = pg_kl_loss(model, mb, pad, n_tok, float(cfg.get("kl_coef", 0.01)),
-                                      int(cfg.get("logprob_chunk", 2048)), tis_cap)
+                                      int(cfg.get("logprob_chunk", 2048)), tis_cap, shared)
                 loss.backward()
                 for kk, v in st.items():
                     stats[kk] += v
@@ -320,7 +328,8 @@ def train(cfg: dict[str, Any]) -> Path:
                "kept_groups": kept, "skipped_groups": skipped,
                "tokens": n_tok, "entropy": stats["entropy_sum"] / max(1, n_tok), "kl": stats["kl_sum"] / max(1, n_tok),
                "grad_norm": gn, "lr": sched.get_last_lr()[0],
-               "tis_w": stats["tis_w_sum"] / stats["tis_n"] if stats["tis_n"] else None}
+               "tis_w": stats["tis_w_sum"] / stats["tis_n"] if stats["tis_n"] else None,
+               "mem_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1) if torch.cuda.is_available() else None}
         log.log(row)
         m_hist.append(float(M_len))
         hit = collapse_check(m_hist, int(cfg.get("collapse_baseline_steps", 10)), int(cfg.get("collapse_window", 20)),
@@ -330,7 +339,7 @@ def train(cfg: dict[str, Any]) -> Path:
             _save(model, tok, opt, sched, out_dir, step, final=True)
             return out_dir / "final"
         if cfg.get("save_every") and step % int(cfg["save_every"]) == 0:
-            _save(model, tok, opt, sched, out_dir, step)
+            _save(model, tok, opt, sched, out_dir, step, keep_every=int(cfg.get("keep_every", 50)))
     return _save(model, tok, opt, sched, out_dir, steps, final=True)
 
 
@@ -365,7 +374,9 @@ def _log_rows(out_dir: Path) -> list[dict]:
     return rows
 
 
-def _save(model, tok, opt, sched, out_dir: Path, step: int, final: bool = False) -> Path:
+def _save(model, tok, opt, sched, out_dir: Path, step: int, final: bool = False, keep_every: int = 50) -> Path:
+    """Checkpoint. The last two keep their optimizer state (for resume); every `keep_every`-th step
+    also keeps its adapter for learning curves and the go/no-go check (plan_final.md P4)."""
     import shutil
     import torch
 
@@ -377,5 +388,8 @@ def _save(model, tok, opt, sched, out_dir: Path, step: int, final: bool = False)
         torch.save({"step": step, "optimizer": opt.state_dict(), "scheduler": sched.state_dict()}, d / "trainer_state.pt")
         cks = sorted((out_dir / "checkpoints").glob("step_*"))
         for old in cks[:-2]:
-            shutil.rmtree(old, ignore_errors=True)
+            if keep_every and int(old.name.split("_")[1]) % keep_every == 0:
+                (old / "trainer_state.pt").unlink(missing_ok=True)
+            else:
+                shutil.rmtree(old, ignore_errors=True)
     return d

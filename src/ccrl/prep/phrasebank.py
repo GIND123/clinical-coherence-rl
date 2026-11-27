@@ -176,3 +176,35 @@ def finalize(ws: Workspace) -> dict | None:
             w.writerow(r + ["", "", ""])
     print(f"[phrasebank] {len(templates)} phrases; {len(fallback)} fell back to the base wording")
     return doc
+
+
+def build_train_bank(review_csv, dest) -> dict:
+    """Training-only phrase bank (plan_final.md P2, 27 Nov 2026). The frozen panel bank took the
+    FIRST verified alternative for each phrase; the training bank takes the next verified
+    alternative that passes the same local checks and differs from the panel's choice. No new
+    model calls: the alternatives and verdicts are the archived ones in phrasebank_review.csv.
+    Phrases without a second alternative keep the base wording (listed in fallback_ids), so the
+    training paraphrase never shows the model a test paraphrase."""
+    from pathlib import Path
+
+    templates, fallback, n_diff = {}, [], 0
+    with open(review_csv, encoding="utf-8", newline="") as f:
+        for r in csv.DictReader(f):
+            base = r["base_phrase"]
+            panel = r["chosen_paraphrase"].strip().rstrip(".")
+            alts = r["alternatives"].split(" || ") if r["alternatives"] else []
+            oks = r["verifier_ok"].split()
+            pick = next((a.strip() for a, ok in zip(alts, oks)
+                         if ok == "Y" and local_ok(base, a.strip()) and a.strip().rstrip(".") != panel), None)
+            if pick is None:
+                fallback.append(r["id"])
+                pick = base
+            else:
+                n_diff += 1
+            templates[r["id"]] = pick.rstrip(".")
+    doc = {"created_at": now_iso(), "source": str(Path(review_csv).as_posix()),
+           "rule": "next verified alternative after the panel bank's choice; base wording otherwise",
+           "n_items": len(templates), "fallback_ids": sorted(fallback), "templates": templates}
+    write_json(Path(dest), doc)
+    print(f"[phrasebank-train] {n_diff} training paraphrases; {len(fallback)} keep the base wording")
+    return doc

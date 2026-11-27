@@ -1,5 +1,8 @@
 # Two papers from one study
 
+> **27 Nov 2026:** the final experiment plan and the $100 Bedrock / $100 Lambda budget are in
+> [plan_final.md](plan_final.md). Where the two differ, that file wins.
+
 *18 Nov 2026, after the main panel; updated 25 Nov 2026 after the secondary arms. This replaces
 the single-paper framing of `problem_statement.md` §3: the grant needs two papers. Results:
 [results_panel_main.md](results_panel_main.md) and [results_secondary.md](results_secondary.md).

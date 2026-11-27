@@ -158,6 +158,115 @@ def completion_logprobs_lowmem(model, samples: list[Sample], pad_id: int, chunk:
     return lps, ents
 
 
+def _cache_layers(cache) -> list[tuple]:
+    """Per-layer (keys, values) of a DynamicCache, across transformers 4.5x and 5.x."""
+    if hasattr(cache, "layers"):
+        return [(layer.keys, layer.values) for layer in cache.layers]
+    if hasattr(cache, "key_cache"):
+        return list(zip(cache.key_cache, cache.value_cache))
+    return [tuple(kv[:2]) for kv in cache]          # legacy tuple of tuples
+
+
+def _expanded_cache(cache, index):
+    """A new DynamicCache whose batch row r is row index[r] of `cache` (differentiable)."""
+    from transformers import DynamicCache
+
+    out = DynamicCache()
+    for li, (k, v) in enumerate(_cache_layers(cache)):
+        out.update(k.index_select(0, index), v.index_select(0, index), li)
+    return out
+
+
+def shared_prompt_logprobs(model, samples: list[Sample], pad_id: int, chunk: int = 2048):
+    """Same result as `completion_logprobs_lowmem`, but each distinct prompt is run once.
+
+    GRPO trains several rollouts per prompt. Here the prompts are run once (right-padded), their
+    key/value cache is expanded to the rollouts, and the completions are run on top of it with the
+    positions they have in the unshared sequence. Gradients from every rollout reach the shared
+    prompt through the expansion, so the loss and its gradient equal the unshared ones up to
+    floating-point order (tests/test_shared_prompt.py). Needs gradient checkpointing off, because
+    transformers disables the cache under checkpointing."""
+    import torch
+
+    global _FHL
+    if _FHL is None:
+        _FHL = _frozen_head_fn()
+    m = model.get_base_model() if hasattr(model, "get_base_model") else model
+    backbone, head = m.model, m.lm_head
+    if head.weight.requires_grad:
+        raise ValueError("shared_prompt_logprobs needs a frozen lm_head")
+    if getattr(backbone, "gradient_checkpointing", False) and backbone.training:
+        raise ValueError("shared_prompt_logprobs needs gradient checkpointing off")
+    device = head.weight.device
+    groups: dict[tuple, list[int]] = {}
+    for i, s in enumerate(samples):
+        if not s.completion_ids:
+            raise ValueError("empty completion")
+        groups.setdefault(tuple(s.prompt_ids), []).append(i)
+    prompts = list(groups)
+    plen = [len(p) for p in prompts]
+    P = max(plen)
+    pid = torch.full((len(prompts), P), pad_id, dtype=torch.long)
+    pmask = torch.zeros((len(prompts), P), dtype=torch.long)
+    for j, p in enumerate(prompts):
+        pid[j, : len(p)] = torch.tensor(p)
+        pmask[j, : len(p)] = 1
+    pid, pmask = pid.to(device), pmask.to(device)
+    ppos = torch.arange(P, device=device).expand(len(prompts), P)
+    out = backbone(input_ids=pid, attention_mask=pmask, position_ids=ppos, use_cache=True)
+    h_last = out.last_hidden_state[torch.arange(len(prompts), device=device),
+                                   torch.tensor(plen, device=device) - 1]
+    owner, rows = [], []
+    for j, p in enumerate(prompts):
+        for i in groups[p]:
+            owner.append(j)
+            rows.append(i)
+    own = torch.tensor(owner, device=device)
+    clen = [len(samples[i].completion_ids) for i in rows]
+    C = max(clen)
+    cid = torch.full((len(rows), C), pad_id, dtype=torch.long)
+    cmask = torch.zeros((len(rows), C), dtype=torch.long)
+    for r, i in enumerate(rows):
+        cid[r, : clen[r]] = torch.tensor(samples[i].completion_ids)
+        cmask[r, : clen[r]] = 1
+    cid, cmask = cid.to(device), cmask.to(device)
+    cpos = torch.tensor(plen, device=device)[own][:, None] + torch.arange(C, device=device)[None]
+    out2 = backbone(input_ids=cid, attention_mask=torch.cat([pmask[own], cmask], 1), position_ids=cpos,
+                    past_key_values=_expanded_cache(out.past_key_values, own), use_cache=True)
+    hc = out2.last_hidden_state
+    lps: list = [None] * len(samples)
+    ents: list = [None] * len(samples)
+    for r, i in enumerate(rows):
+        h = torch.cat([h_last[owner[r]][None], hc[r, : clen[r] - 1]], 0)
+        lps[i], ents[i] = _FHL.apply(h, head.weight, cid[r, : clen[r]], chunk)
+    return lps, ents
+
+
+def shared_prompt_batches(samples: list[Sample], max_tokens: int) -> list[list[Sample]]:
+    """Micro-batches that keep each prompt's rollouts together. A batch costs its distinct prompts
+    plus its completions (padded widths); a prompt group larger than the budget gets a batch alone."""
+    groups: dict[tuple, list[Sample]] = {}
+    for s in samples:
+        groups.setdefault(tuple(s.prompt_ids), []).append(s)
+    order = sorted(groups.values(), key=lambda g: len(g[0].prompt_ids) + max(len(s.completion_ids) for s in g),
+                   reverse=True)
+    batches: list[list[Sample]] = []
+    cur: list[list[Sample]] = []
+    for g in order:
+        trial = cur + [g]
+        P = max(len(x[0].prompt_ids) for x in trial)
+        C = max(len(s.completion_ids) for x in trial for s in x)
+        n_r = sum(len(x) for x in trial)
+        if cur and len(trial) * P + n_r * C > max_tokens:
+            batches.append([s for x in cur for s in x])
+            cur = [g]
+        else:
+            cur = trial
+    if cur:
+        batches.append([s for x in cur for s in x])
+    return batches
+
+
 def token_budget_batches(samples: list[Sample], max_tokens: int, max_samples: int = 64) -> list[list[Sample]]:
     order = sorted(samples, key=lambda s: len(s.prompt_ids) + len(s.completion_ids), reverse=True)
     batches: list[list[Sample]] = []

@@ -21,6 +21,8 @@ def add_parser(sub) -> None:
     s.add_argument("--tau-i", type=float, default=None, help="reward tau_I measured by `ccrl train tau-i`")
     s.add_argument("--gpu-mem", type=float, default=None, help="vLLM share of GPU memory (A100-40GB: 0.45)")
     s.add_argument("--vllm-sleep", action="store_true", help="free vLLM memory during the backward pass")
+    s.add_argument("--no-shared", action="store_true",
+                   help="unshared training pass with gradient checkpointing (fallback if check_shared fails)")
     s = t.add_parser("eval", help="evaluate a local model on the frozen panel items")
     s.add_argument("--model", required=True)
     s.add_argument("--adapter", default=None)
@@ -29,6 +31,17 @@ def add_parser(sub) -> None:
     s.add_argument("--limit-cases", type=int, default=None)
     s.add_argument("--backend", choices=["hf", "vllm"], default="hf")
     s.add_argument("--temperature", type=float, default=0.7, help="0.7 = registered decoding; 0 = baseline")
+    s = t.add_parser("general", help="MMLU-Pro / GSM8K subsets for the H3 general-capability test (vLLM)")
+    s.add_argument("--model", required=True)
+    s.add_argument("--adapter", default=None)
+    s.add_argument("--name", required=True, help="output runs/local_eval/general_<name>.parquet")
+    s.add_argument("--gpu-mem", type=float, default=0.85)
+    s.add_argument("--limit", type=int, default=None, help="first N questions per benchmark (smoke test)")
+    s = t.add_parser("gonogo", help="go/no-go check at step 50 of the first coherence run (plan_final.md)")
+    s.add_argument("--run", required=True)
+    s.add_argument("--pilot", required=True, help="pilot eval of the step-50 adapter")
+    s.add_argument("--base", required=True, help="pilot eval of the untrained model")
+    s.add_argument("--at-step", type=int, default=50)
     s = t.add_parser("tau-i", help="reward constant tau_I from the base model's pilot evaluation")
     s.add_argument("--eval", required=True, help="runs/local_eval/<name>.parquet of the untrained model, --set pilot")
     s = t.add_parser("hypotheses", help="the registered confirmatory tests H2-H7 over all evaluated arms")
@@ -70,6 +83,8 @@ def run(a: argparse.Namespace) -> int:
             over["generation"] = gen_over
         if a.tau_i is not None:
             over["reward"] = {"tau_I": float(a.tau_i)}
+        if a.no_shared:
+            over.update(shared_prompt=False, gradient_checkpointing=True)
         cfg = load_config(a.config, over)
         cfg["output_dir"] = cfg["output_dir"].format(name=cfg["name"], seed=a.seed)
         m = cfg.get("method", "grpo")
@@ -87,12 +102,30 @@ def run(a: argparse.Namespace) -> int:
                 ex = sft.distill_examples(cfg["export_dir"])
             else:
                 smp = PairedSampler(cfg.get("dataset", "ddxplus"), a.seed, cfg.get("transforms"), "triage", False,
-                                    cfg.get("pool_path"), cfg.get("phrasebank_path"))
+                                    cfg.get("pool_path"), cfg.get("phrasebank_path"), cfg.get("cue_bank", "panel"))
                 n = int(cfg.get("sft_examples", 8000)) // 2
-                ex = sft.kb_bayes_examples(smp, n) if src == "kb_bayes" else sft.bct_examples(cfg, smp, n)
+                if src == "kb_bayes":
+                    ex = sft.kb_bayes_examples(smp, n)
+                elif src == "bct":
+                    ex = sft.bct_examples(cfg, smp, n)
+                elif src == "selfcons":
+                    ex = sft.selfcons_examples(cfg, smp, int(cfg.get("sft_examples", 8000)) // 4)
+                else:
+                    raise SystemExit(f"unknown sft_source {src!r}")
             print(sft.train_sft(cfg, ex))
         else:
             raise SystemExit(f"unknown method {m}")
+        return 0
+    if a.taction == "gonogo":
+        import json as _json
+
+        from ccrl.train.gonogo import check
+        res = check(a.run, a.pilot, a.base, a.at_step)
+        print(_json.dumps(res, indent=1))
+        return 0 if res["go"] else 3
+    if a.taction == "general":
+        from ccrl.train.general import run as run_general
+        print(run_general(a.model, a.name, a.adapter, gpu_mem=a.gpu_mem, limit=a.limit))
         return 0
     if a.taction == "eval":
         from ccrl.train.evaluate import evaluate_local

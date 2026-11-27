@@ -25,7 +25,11 @@ Tests (case bootstrap, 2,000 resamples, seed 0; one-sided where registered; Holm
   H7  gap closure (gap_base - gap_CCR) / gap_base >= 0.5, for top-1 and Brier: one-sided test
       of closure > 0.5
 
-Informativeness guard (Amendment 4, 27 Nov 2026; added before any run under the amendment).
+Primary endpoints (plan_final.md §3.3, 27 Nov 2026, before any run under it): nuisance flip rate,
+normalised incoherence and selectivity, each arm against RLVR, Brier-only, BCT, self-consistency
+distillation and the untrained model (`primary`); per-seed signs (`seed_signs`).
+
+Informativeness guard (Amendment 4, 27 Nov 2026; revised in plan_final.md §3.3, see `guard`).
 Total incoherence is minimised by answering every patient with the same flat posterior, and the
 first decisive coherence run did exactly that (docs/training_runs.md). H2 is therefore reported as
 supported only if, on the same DDXPlus items, the CCR arm keeps (a) at least 90% of RLVR's
@@ -46,8 +50,12 @@ import pandas as pd
 from ccrl.workspace import Workspace
 
 N_BOOT = 2000
+M0 = 0.459            # reward constant m0 (config/train/base.yaml): the information floor of the guard
 FAMILIES = ("js_order", "js_dup", "js_para", "js_cue")
-METRICS = ("total", *FAMILIES, "floor", "retest_flip", "top1", "top3", "brier", "gap_top1", "gap_brier")
+METRICS = ("total", *FAMILIES, "floor", "retest_flip", "top1", "top3", "brier", "gap_top1", "gap_brier",
+           # plan_final.md §3.3 (27 Nov 2026): tempering-robust primary endpoints and their parts
+           "nuisance_flip", "js_nuis", "ceiling", "js_ablate", "dir_agree_gold", "dir_agree_top5", "entropy", "conf")
+NUISANCE = ("retest", "perm1", "perm2", "perm3", "dup", "para", "cue")
 
 
 # ------------------------------------------------------------------ per-case metrics
@@ -70,8 +78,24 @@ def per_case(parquet: str, model: str | None = None, ws: Workspace | None = None
         st["gap_brier"] = st["single_brier"] - st["ens_brier"]        # positive = ensemble better
         pc = pc.merge(st[["case_id", "dataset", "retest_flip", "gap_top1", "gap_brier"]],
                       on=["case_id", "dataset"], how="left")
+    pc["js_nuis"] = (3 * pc["js_order"] + pc["js_dup"] + pc["js_para"] + pc["js_cue"]) / 6.0
+    pc = pc.merge(nuisance_flips(post), on=["case_id", "dataset"], how="left")
     keep = ["case_id", "dataset"] + [m for m in METRICS if m in pc]
     return pc[keep]
+
+
+def nuisance_flips(post: pd.DataFrame) -> pd.DataFrame:
+    """Per case: share of the 7 meaning-preserving renderings (retest, 3 orders, duplication,
+    paraphrase, cue) whose top-1 answer differs from the base rendering's. Invariant to any
+    monotone tempering of an answer, so flattening cannot lower it."""
+    rows = []
+    for (ds, c), g in post.groupby(["dataset", "case_id"]):
+        v = {r.transform: int(np.argmax(np.asarray(r.probs, float))) for r in g.itertuples(index=False)}
+        if "base" not in v:
+            continue
+        f = [float(v[t] != v["base"]) for t in NUISANCE if t in v]
+        rows.append({"case_id": c, "dataset": ds, "nuisance_flip": float(np.mean(f)) if f else np.nan})
+    return pd.DataFrame(rows, columns=["case_id", "dataset", "nuisance_flip"])
 
 
 def pooled(paths: list[str], model: str | None = None, ws: Workspace | None = None) -> pd.DataFrame:
@@ -199,6 +223,90 @@ def h7(ccr: pd.DataFrame, base: pd.DataFrame, ds: str = "ddxplus", seed: int = 0
     return pd.DataFrame(rows)
 
 
+# ------------------------------------------------------------------ primary endpoints (plan_final.md §3.3)
+def _ratio(a: np.ndarray, b: np.ndarray, i) -> float:
+    d = b[i].mean()
+    return float(a[i].mean() / d) if d > 0 else float("nan")
+
+
+def endpoint_values(pc: pd.DataFrame, ds: str = "ddxplus") -> dict:
+    """Arm-level values of the three primary endpoints (ratios of means over cases)."""
+    x = pc[pc["dataset"] == ds]
+    return {"nuisance_flip": float(x["nuisance_flip"].mean()),
+            "norm_incoherence": float(x["total"].mean() / x["ceiling"].mean()),
+            "selectivity": float(x["js_ablate"].mean() / x["js_nuis"].mean())}
+
+
+def primary(new: pd.DataFrame, ref: pd.DataFrame, label: str, ds: str = "ddxplus", seed: int = 0) -> pd.DataFrame:
+    """The three primary endpoints, `new` against `ref`: paired case bootstrap, one-sided, Holm over 3.
+      nuisance flip rate      lower is better  (mean over cases)
+      normalised incoherence  lower is better  (mean total incoherence / mean between-patient JS)
+      selectivity             higher is better (mean JS to the ablated answer / mean nuisance JS)"""
+    rng = np.random.default_rng(seed)
+    cols = ["nuisance_flip", "total", "ceiling", "js_ablate", "js_nuis"]
+    A = new[new["dataset"] == ds][["case_id", *cols]]
+    B = ref[ref["dataset"] == ds][["case_id", *cols]]
+    m = A.merge(B, on="case_id", suffixes=("_n", "_r")).dropna()
+    g = {k: m[k].to_numpy(float) for k in m.columns if k != "case_id"}
+    stats = {
+        "nuisance_flip": (lambda i, s: float(g[f"nuisance_flip_{s}"][i].mean()), -1),
+        "norm_incoherence": (lambda i, s: _ratio(g[f"total_{s}"], g[f"ceiling_{s}"], i), -1),
+        "selectivity": (lambda i, s: _ratio(g[f"js_ablate_{s}"], g[f"js_nuis_{s}"], i), +1),
+    }
+    n = len(m)
+    rows = []
+    for name, (f, better) in stats.items():
+        row = {"hypothesis": f"primary: {label}", "dataset": ds, "metric": name, "n": n,
+               "better": "lower" if better < 0 else "higher"}
+        if n:
+            idx = np.arange(n)
+            bs = np.array([f(i, "n") - f(i, "r") for i in (rng.integers(0, n, n) for _ in range(N_BOOT))])
+            row.update({"new": f(idx, "n"), "ref": f(idx, "r"), "diff": f(idx, "n") - f(idx, "r"),
+                        "lo95": float(np.nanpercentile(bs, 2.5)), "hi95": float(np.nanpercentile(bs, 97.5)),
+                        "p_one_sided": float(np.mean(better * bs <= 0))})
+        rows.append(row)
+    df = pd.DataFrame(rows)
+    df["p_holm"] = holm(df["p_one_sided"].fillna(1.0).tolist()) if "p_one_sided" in df else 1.0
+    df["supported"] = df["p_holm"] < 0.05
+    return df
+
+
+def seed_signs(new_paths: list[str], ref_paths: list[str], ds: str = "ddxplus",
+               ws: Workspace | None = None) -> pd.DataFrame:
+    """Each seed on its own (seed k against seed k of the reference): the sign of every primary
+    endpoint's difference. A result is called consistent only if every seed has the same sign."""
+    rows = []
+    for pn, pr in zip(new_paths, ref_paths):
+        a, b = endpoint_values(per_case(pn, ws=ws), ds), endpoint_values(per_case(pr, ws=ws), ds)
+        rows.append({"new": Path(pn).stem, "ref": Path(pr).stem, **{f"d_{k}": a[k] - b[k] for k in a}})
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        want = {"d_nuisance_flip": -1, "d_norm_incoherence": -1, "d_selectivity": +1}
+        df.attrs["consistent"] = {k: bool((np.sign(df[k]) == sg).all()) for k, sg in want.items()}
+    return df
+
+
+def brier_decomposition(pc: pd.DataFrame, ds: str = "ddxplus", bins: int = 10) -> dict:
+    """Murphy decomposition of the top-label Brier score (event: the top answer is correct) on the
+    base renderings: Brier = reliability - resolution + uncertainty (secondary endpoint)."""
+    x = pc[pc["dataset"] == ds]
+    conf, hit = x["conf"].to_numpy(float), x["top1"].to_numpy(float)
+    ok = np.isfinite(conf) & np.isfinite(hit)
+    conf, hit = conf[ok], hit[ok]
+    if not len(conf):
+        return {}
+    k = np.clip(np.digitize(conf, np.linspace(0, 1, bins + 1)[1:-1]), 0, bins - 1)
+    base = hit.mean()
+    rel = res = 0.0
+    for b in range(bins):
+        m = k == b
+        if m.any():
+            rel += m.mean() * (conf[m].mean() - hit[m].mean()) ** 2
+            res += m.mean() * (hit[m].mean() - base) ** 2
+    return {"brier_top": float(np.mean((conf - hit) ** 2)), "reliability": float(rel), "resolution": float(res),
+            "uncertainty": float(base * (1 - base))}
+
+
 # ------------------------------------------------------------------ informativeness guard (Amendment 4)
 def informativeness(parquet: str, ds: str = "ddxplus", model: str | None = None) -> tuple[dict, pd.DataFrame]:
     """Dataset-level M, entropy and sum-to-100 compliance of the base answers, plus per-case
@@ -238,9 +346,17 @@ def guard(ccr_paths: list[str], rlvr_paths: list[str], ccr_pc: pd.DataFrame, rlv
     ir = [informativeness(p, ds)[0] for p in rlvr_paths]
     mean = lambda L, k: float(np.mean([x[k] for x in L if x]))  # noqa: E731
     Mc, Mr, Ec, Er = mean(ic, "M"), mean(ir, "M"), mean(ic, "entropy"), mean(ir, "entropy")
+    # revised guard (plan_final.md §3.3, A4.4; 27 Nov 2026, before any run under it). The raw H2
+    # reduction counts only if the two tempering-robust endpoints are also lower than RLVR's
+    # (one-sided 95%, unadjusted) and the coherence arm's M stays at or above m0. The Amendment 4
+    # rule (M >= 90% of RLVR's, entropy <= RLVR's + 0.5) is still reported, as `supported_a4`.
+    pr = primary(ccr_pc, rlvr_pc, "CCR vs RLVR (guard)", ds).set_index("metric")
+    robust = bool(pr.loc["nuisance_flip"].get("p_one_sided", 1.0) < 0.05
+                  and pr.loc["norm_incoherence"].get("p_one_sided", 1.0) < 0.05)
     rows = [{"hypothesis": "H2 guard", "dataset": ds, "M_ccr": Mc, "M_rlvr": Mr, "entropy_ccr": Ec, "entropy_rlvr": Er,
-             "sum100_ccr": mean(ic, "sum100"), "sum100_rlvr": mean(ir, "sum100"),
-             "supported": bool(Mc >= 0.9 * Mr and Ec <= Er + 0.5)}]
+             "sum100_ccr": mean(ic, "sum100"), "sum100_rlvr": mean(ir, "sum100"), "m0": M0,
+             "supported_a4": bool(Mc >= 0.9 * Mr and Ec <= Er + 0.5),
+             "supported": bool(robust and Mc >= M0)}]
     bc = pd.concat([informativeness(p, ds)[1] for p in ccr_paths]).groupby("case_id", as_index=False).mean()
     br = pd.concat([informativeness(p, ds)[1] for p in rlvr_paths]).groupby("case_id", as_index=False).mean()
     a = ccr_pc[ccr_pc["dataset"] == ds].merge(bc, on="case_id")
@@ -263,7 +379,8 @@ def run(eval_dir: str, panel_parquet: str | None = None, ws: Workspace | None = 
     ws = ws or Workspace(False)
     d = Path(eval_dir)
     out = []
-    arms = {a: _arm_files(d, a) for a in ("ccr_acc_fid", "rlvr", "labelfree_mcr", "qwen3_8b_ccr_acc_fid")}
+    arms = {a: _arm_files(d, a) for a in ("ccr_acc_fid", "rlvr", "labelfree_mcr", "qwen3_8b_ccr_acc_fid",
+                                          "brier_only", "bct", "sft_selfcons")}
     P = {a: pooled(f, ws=ws) for a, f in arms.items() if f}
     base4 = per_case(str(d / "base4b.parquet"), ws=ws) if (d / "base4b.parquet").exists() else None
     if "ccr_acc_fid" in P and "rlvr" in P:
@@ -275,6 +392,34 @@ def run(eval_dir: str, panel_parquet: str | None = None, ws: Workspace | None = 
         ci = read_jsonl(ws.items_dir / "case_index.jsonl")
         held_cases = {r["case_id"] for r in ci if r.get("pathology") in set(held) and r["role"] == "panel"}
         out.append(h4(P["ccr_acc_fid"], P["rlvr"], held_cases))
+    if "ccr_acc_fid" in P:
+        # primary endpoints (plan_final.md §3.3): C2 vs RLVR, C3 vs Brier-only, C4 vs BCT and
+        # self-consistency distillation, and every arm against the untrained model
+        for ref in ("rlvr", "brier_only", "bct", "sft_selfcons"):
+            if ref in P:
+                out.append(primary(P["ccr_acc_fid"], P[ref], f"CCR vs {ref}"))
+        if base4 is not None:
+            for arm in P:
+                out.append(primary(P[arm], base4, f"{arm} vs base"))
+        if "rlvr" in P and len(arms["ccr_acc_fid"]) > 1:
+            ss = seed_signs(arms["ccr_acc_fid"], arms["rlvr"], ws=ws)
+            out.append(pd.DataFrame([{"hypothesis": "seed signs CCR vs RLVR",
+                                      **{f"consistent_{k}": v for k, v in ss.attrs.get("consistent", {}).items()}}]))
+        for arm in P:
+            out.append(pd.DataFrame([{"hypothesis": "Brier decomposition (secondary)", "arm": arm,
+                                      **brier_decomposition(P[arm])}]))
+    gb = d / "general_base4b.parquet"
+    if gb.exists():
+        from ccrl.train.general import noninferior
+        base_g = pd.read_parquet(gb)
+        rows = []
+        for arm, files in arms.items():
+            for f in files:
+                g = d / f"general_{Path(f).stem}.parquet"
+                if g.exists():
+                    rows += noninferior(pd.read_parquet(g), base_g, Path(f).stem)
+        if rows:
+            out.append(pd.DataFrame(rows))
     if "labelfree_mcr" in P and base4 is not None:
         out.append(pd.DataFrame([superiority_lower(P["labelfree_mcr"], base4, "medcase", "total", "H5"),
                                  noninferiority(P["labelfree_mcr"], base4, "medcase", "top3", 0.03, "H5")]))

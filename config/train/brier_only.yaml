@@ -1,0 +1,5 @@
+# Brier-only control (plan_final.md §3.2, C3): the accuracy term of CCR+acc+fid on its own
+# (negative Brier score of the stated posterior), no coherence or fidelity term. Same rollouts,
+# readout and credit as the method, so any difference from ccr_acc_fid is the coherence term's.
+base: base.yaml
+reward: {alpha: 1.0, beta: 0.0, gamma: 0.0, acc_mode: brier}

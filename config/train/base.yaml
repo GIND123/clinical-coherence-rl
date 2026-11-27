@@ -8,12 +8,21 @@ model: Qwen/Qwen3-4B
 dtype: bfloat16
 device_map: auto
 lora: {r: 32, alpha: 64, dropout: 0.0, target_modules: all-linear}
-gradient_checkpointing: true
+# shared_prompt (plan_final.md P1, 27 Nov 2026): each distinct prompt is run once in the training
+# pass and shared by its rollouts; identical loss and gradient (tests/test_shared_prompt.py). It needs
+# gradient checkpointing off. SFT configs turn checkpointing back on.
+gradient_checkpointing: false
+shared_prompt: true
+shared_micro_batch_tokens: 8192
 chat_template_kwargs: {enable_thinking: false}
 dataset: ddxplus
 label_free: false
 contrast: triage
 transforms: {perm: 1.0, dup: 1.0, para: 1.0, cue: 1.0}
+# training perturbation banks, disjoint from the test items' (plan_final.md P2, 27 Nov 2026): the
+# second verified paraphrase of each phrase, and 40 training-only irrelevant cues
+phrasebank_path: artifacts/frozen/banks/ddx_phrasebank_train.json
+cue_bank: train
 patients_per_step: 16
 group_size: 4
 contrast_size: 2

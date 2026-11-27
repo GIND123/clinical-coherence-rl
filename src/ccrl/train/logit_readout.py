@@ -66,7 +66,8 @@ def train_logit_readout(cfg: dict[str, Any]) -> Path:
     model, tok = load_model_and_tokenizer(cfg, trainable=True)
     kw = cfg.get("chat_template_kwargs", {"enable_thinking": False})
     sampler = PairedSampler(cfg.get("dataset", "ddxplus"), seed, cfg.get("transforms"), cfg.get("contrast", "triage"),
-                            bool(cfg.get("label_free", False)), cfg.get("pool_path"), cfg.get("phrasebank_path"))
+                            bool(cfg.get("label_free", False)), cfg.get("pool_path"), cfg.get("phrasebank_path"),
+                            cfg.get("cue_bank", "panel"))
     params = [p for p in model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=float(cfg.get("lr", 1e-5)))
     lam_s, lam_ce, delta = float(cfg.get("lambda_s", 1.0)), float(cfg.get("lambda_ce", 0.0)), float(cfg.get("delta", 0.2))

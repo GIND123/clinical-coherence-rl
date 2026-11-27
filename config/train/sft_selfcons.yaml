@@ -1,0 +1,11 @@
+# Self-consistency distillation (plan_final.md §3.2, C4/C5): label-free SFT on the untrained
+# model's own mean posterior over 8 renderings of each patient (4 clean orders, 4 nuisance
+# transforms). The "just distil the ensemble" baseline. 8,000 examples = 2,000 patients x 4.
+base: base.yaml
+method: sft
+sft_source: selfcons
+sft_examples: 8000
+lr: 1.0e-4
+batch_size: 8
+epochs: 1.0
+gradient_checkpointing: true

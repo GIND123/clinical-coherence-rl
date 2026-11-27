@@ -1,0 +1,6 @@
+# Mechanism cell B (plan_final.md §3.2, C1): the registered credit (group-relative advantages of
+# each rollout's own reward) with the strict sum-to-100 readout. If the estimator alone causes
+# collapse, this run loses M like attempt 2.
+base: base.yaml
+credit: reward
+steps: 60

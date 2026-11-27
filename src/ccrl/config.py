@@ -56,6 +56,12 @@ def cues() -> dict:
 
 
 @lru_cache(maxsize=None)
+def cues_train() -> dict:
+    """Training-only irrelevant cues, disjoint from the panel's (plan_final.md P2)."""
+    return load_yaml(paths.CONFIG / "cues_train.yaml")
+
+
+@lru_cache(maxsize=None)
 def _models_raw() -> dict:
     return load_yaml(paths.CONFIG / "models.yaml")
 

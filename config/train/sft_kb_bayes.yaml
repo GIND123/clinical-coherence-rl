@@ -6,3 +6,4 @@ sft_examples: 8000
 lr: 1.0e-4
 batch_size: 8
 epochs: 1.0
+gradient_checkpointing: true

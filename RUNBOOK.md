@@ -314,6 +314,19 @@ Without push access, zip `config/models.lock.yaml` and the whole
 
 ---
 
+> **Order and ceiling (27 Nov 2026, docs/amendment_5.md §A).** Run these in this order:
+>
+> 1. the 8b temperature 0 queue;
+> 2. all of 8c (`fresh run`);
+> 3. the 8b `contamination run`, **last**.
+>
+> Together they may spend at most **$200** on top of the $561.55 already spent: `config/budget.yaml`
+> now sets the hard cap to $760, with tighter job caps. Kimi K3 is most of the contamination cost, so
+> running it last means a cap can only shorten the probe.
+>
+> `ccrl freeze --check` now lists **43 files**. The two new ones are training-only banks that no
+> Bedrock job reads.
+
 ## 8b. Amendment 2: temperature 0 at full scale and a contamination probe (≈ $66, before 18 Dec)
 
 Design and reasons: docs/amendment_2.md. Expected cost is about $66 and the worst case about
@@ -322,7 +335,7 @@ $244. This is well inside the remaining hard-cap headroom.
 ```bash
 cd clinical-coherence-rl && source .venv/bin/activate
 git pull
-ccrl freeze --check            # must print OK (41 files, frozen 2026-11-27...)
+ccrl freeze --check            # must print OK (43 files, frozen 2026-11-27...)
 ccrl status                    # committed about $561.55
 ccrl plan | grep temp0_        # temp0_panel ~$17, temp0_ext ~$9 expected
 ccrl contamination plan        # ~$40 expected (Kimi K3 is most of it)
@@ -367,7 +380,7 @@ Run it **after** 8b has finished (it can also run on its own):
 ```bash
 cd clinical-coherence-rl && source .venv/bin/activate
 git pull
-ccrl freeze --check            # OK (41 files)
+ccrl freeze --check            # OK (43 files)
 ccrl fresh plan                # ~238 reports; expected total about $76
 bash scripts/run_detached.sh fresh run
 tail -f runs/logs/ccrl-fresh-run-*.log

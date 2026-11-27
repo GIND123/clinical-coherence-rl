@@ -1,0 +1,5 @@
+# Mechanism cell A (plan_final.md §3.2, C1): team credit with the registered (renormalising)
+# readout. If the readout channel alone causes collapse, this run flattens like attempt 2.
+base: base.yaml
+readout: {strict_sum: false, sum_tol: 2}
+steps: 60

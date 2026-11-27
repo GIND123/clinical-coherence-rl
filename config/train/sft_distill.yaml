@@ -6,3 +6,4 @@ export_dir: runs/export
 lr: 1.0e-4
 batch_size: 8
 epochs: 2.0
+gradient_checkpointing: true
