@@ -106,6 +106,10 @@ reasoning per answer, against the 2,500 assumed.
 (45,000 calls, ~$26 expected) and the `contamination` probe (7,200 calls, ~$40 expected). The
 caps are $55, $30 and $200.
 
+**Amendment 3** (docs/amendment_3.md, to run before 18 Dec): up to 150 real case reports
+published after the models were frozen; about $76–90 for preparation and panel together. The caps
+are $40, $40, $5 and $130.
+
 **Study total: $560.02 reported** ($561.55 counted by the guard, which includes
 calls with uncertain billing). Flex billing was confirmed on 24 Nov from the
 AWS Credits page ($237.64 vs $240.36 in the ledger). About $540 of credit

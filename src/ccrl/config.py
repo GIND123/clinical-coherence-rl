@@ -18,7 +18,7 @@ from ccrl import paths
 
 EFFORT_STRATEGIES = ("output_config", "reasoning_field", "none")
 SERVICE_TIERS = ("default", "flex", "priority")
-ITEM_SETS = ("pilot", "panel", "core", "sequential", "distill", "panel_ext")
+ITEM_SETS = ("pilot", "panel", "core", "sequential", "distill", "panel_ext", "fresh")
 
 
 class ConfigError(ValueError):

@@ -1,0 +1,20 @@
+{
+  "query": "\"case reports\"[pt] AND \"open access\"[filter] AND \"cc by license\"[filter] AND 2026-11-07:2026-11-27[pdat]",
+  "window": [
+    "2026-11-07",
+    "2026-11-27"
+  ],
+  "pmc_hits": 1041,
+  "parsed": 1041,
+  "eligible": 238,
+  "selected": 238,
+  "excluded": {
+    "no case-presentation section": 643,
+    "case section longer than 6000 characters": 115,
+    "more than one patient": 24,
+    "case section shorter than 700 characters": 8,
+    "published before 7 Nov 2026": 13
+  },
+  "seed": 20261105,
+  "fetched_at": "2026-11-27T00:13:21-0500"
+}

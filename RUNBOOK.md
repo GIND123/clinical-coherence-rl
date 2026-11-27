@@ -322,7 +322,7 @@ $244. This is well inside the remaining hard-cap headroom.
 ```bash
 cd clinical-coherence-rl && source .venv/bin/activate
 git pull
-ccrl freeze --check            # must print OK (39 files, frozen 2026-11-26...)
+ccrl freeze --check            # must print OK (41 files, frozen 2026-11-27...)
 ccrl status                    # committed about $561.55
 ccrl plan | grep temp0_        # temp0_panel ~$17, temp0_ext ~$9 expected
 ccrl contamination plan        # ~$40 expected (Kimi K3 is most of it)
@@ -347,6 +347,53 @@ Upload the newest `runs/archive/*.tar.gz` and its `.sha256` to the shared folder
 - **Do not add `temp0` to the queue.** Its 900 Kimi K3 requests can never run, because Bedrock
   rejects temperature for Kimi K3.
 - **If anything stops,** rerun the same command. Finished calls are never sent again.
+
+---
+
+## 8c. Amendment 3: real case reports published after the models were frozen (≈ $76–90, before 18 Dec)
+
+Design and reasons: docs/amendment_3.md. One command runs every stage; each stage resumes if
+interrupted:
+
+1. Kimi K3 marks where each case stops before its diagnosis.
+2. Deterministic screening.
+3. Extraction (Kimi K3) and verification (GLM-5).
+4. Finalisation.
+5. Building the items.
+6. The panel calls, 10 per case × 6 models.
+
+Run it **after** 8b has finished (it can also run on its own):
+
+```bash
+cd clinical-coherence-rl && source .venv/bin/activate
+git pull
+ccrl freeze --check            # OK (41 files)
+ccrl fresh plan                # ~238 reports; expected total about $76
+bash scripts/run_detached.sh fresh run
+tail -f runs/logs/ccrl-fresh-run-*.log
+```
+
+- **Checkpoints in the log:**
+  - `[fresh] screen: N usable of 238`;
+  - `[fresh] finalize: {...}`;
+  - `[fresh] items: {...}`;
+  - then the panel progress.
+- **If fewer than 60 cases pass,** it stops before the panel. That costs about $15–25 and is not
+  an error: send the archive.
+- **If anything stops,** rerun `bash scripts/run_detached.sh fresh run`.
+
+When it finishes:
+
+```bash
+ccrl status
+ccrl export && ccrl archive pack
+```
+
+Then upload the new archive and its `.sha256`, as before. Also push the prepared files:
+
+```bash
+git add artifacts/frozen/fresh && git commit -m "Amendment 3 prepared cases and items" && git push
+```
 
 ---
 

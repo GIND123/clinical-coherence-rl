@@ -373,16 +373,30 @@ def build(ws: Workspace, allow_missing_para: bool = False, allow_short_mcr: bool
 
 
 # ----------------------------------------------------------------- loading
+def _fresh_items_dir(ws: Workspace) -> Path:
+    """Amendment 3 items (post-freeze real case reports), built by `ccrl fresh run`; kept
+    outside items/ so the main freeze, and every job that ran under it, is untouched."""
+    return ws.frozen / "fresh" / "items"
+
+
 def load_items(ws: Workspace) -> dict[str, dict]:
     from ccrl.util import read_jsonl
     p = ws.items_dir / "items.jsonl"
     if not p.exists():
         raise BuildError(f"{p} not found; run `ccrl build items`")
-    return {it["item_id"]: it for it in read_jsonl(p)}
+    out = {it["item_id"]: it for it in read_jsonl(p)}
+    f = _fresh_items_dir(ws) / "items.jsonl"
+    if f.exists():
+        out.update({it["item_id"]: it for it in read_jsonl(f)})
+    return out
 
 
 def load_sets(ws: Workspace) -> dict[str, list[str]]:
-    return read_json(ws.items_dir / "sets.json")
+    sets = read_json(ws.items_dir / "sets.json")
+    f = _fresh_items_dir(ws) / "sets.json"
+    if f.exists():
+        sets.update(read_json(f))
+    return sets
 
 
 def load_systems(ws: Workspace) -> dict[str, str]:

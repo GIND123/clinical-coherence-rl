@@ -68,6 +68,10 @@ class MockBedrock:
                 self._alt(it["base"], k) for k in range(3)]} for it in items]})
         elif "TASK: PROBE_PING" in system:
             text = "OK"
+        elif "TASK: FRESH_CASE_CUT" in system:
+            n = len(re.findall(r"(?m)^\d+\. ", user_turns[-1]))
+            text = json.dumps({"single_patient": True, "final_diagnosis": "Zebra fever", "diagnostic_case": True,
+                               "last_sentence": max(0, n - 2), "reason": "mock"})
         elif "TASK: CASE_COMPLETION" in system:
             last = [s for s in _SENT.split(user_turns[-1]) if s.strip()][-1]
             text = "The patient was observed closely. " + last + " Further tests followed over the next days."

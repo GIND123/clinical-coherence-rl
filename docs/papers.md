@@ -54,6 +54,14 @@ These two arms are Bedrock-only, cost about $66 and run before 18 Dec:
   identity, or reproduce its text verbatim, and links suspect cases to panel accuracy. This
   answers the obvious reviewer objection to published case reports.
 
+### Amendment 3 (27 Nov 2026; docs/amendment_3.md)
+
+This is a **contamination-free real-case replication**: up to 150 CC BY case reports first
+published 7–27 Nov 2026, after every panel model was frozen on Bedrock. It runs through the same
+preparation, items and estimands as the MedCaseReasoning panel, for about $76–90. It replicates
+the instability findings on real cases the models cannot have seen, and gives a direct accuracy
+comparison against the older published cases.
+
 ### Clinician component (what lifts it to a clinical journal)
 
 Two clinicians, blinded to the model, rate:

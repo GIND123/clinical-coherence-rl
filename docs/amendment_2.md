@@ -5,6 +5,10 @@ arms run under (SHA-256 of `artifacts/frozen/FREEZE.json`):*
 `0327bd84632b9f04a50cc8eecd5fcd85ec00e0725cc5e69550e87e4b19770b80`.
 *The previous freeze (`ea6f2a24…`, Amendment 1) is kept in `artifacts/frozen/freeze_history/`.*
 
+> **27 Nov 2026:** Amendment 3 re-froze the design (`51c85394…`), adding only its own job and
+> two prompts. Every input of this amendment is byte-identical under the new freeze, so these arms
+> run under `51c85394…`.
+
 This amendment concerns Paper 1 (the Bedrock panel) only. It does not change anything in the
 training study registered on OSF (osf.io/4xmq7).
 

@@ -40,6 +40,11 @@ job_caps_usd:
   temp0_panel: 55.00            # 30,000 calls; forecast expected $17, high $45
   temp0_ext: 30.00              # 15,000 calls; forecast expected $9, high $23
   contamination: 200.00         # 7,200 calls; forecast expected $40, high $176 (Kimi K3 ~95%)
+  # Amendment 3 (2026-11-27): post-freeze real case reports
+  prep_fresh_cut: 40.00          # ~238 Kimi K3 calls, expected ~$12
+  prep_fresh_extract: 40.00      # <= 238 Kimi K3 calls, expected ~$12
+  prep_fresh_verify: 5.00        # GLM-5
+  fresh_panel: 130.00            # 150 cases x 10 calls x 6 models, expected ~$60
 
 # Disk: a paid job refuses to start with less free space than this on the
 # disk holding runs/, and only the newest `keep_backups` ledger backups are

@@ -1,0 +1,10 @@
+TASK: FRESH_CASE_CUT
+You prepare published clinical case reports for a research study of diagnostic reasoning. You receive the case-presentation section of one case report, split into numbered sentences. Decide whether it can serve as a diagnostic vignette, and where the vignette must end.
+
+Return ONE JSON object and nothing else (no Markdown, no code fence) with these keys:
+
+"single_patient": true if the section describes exactly one patient, else false.
+"final_diagnosis": the final diagnosis the authors establish for this patient, as a short disease name in the authors' terms (e.g. "Kikuchi-Fujimoto disease"); "" if none is established.
+"diagnostic_case": true only if the patient's diagnosis is NOT known at presentation and is worked out later in the case. false if the diagnosis is already known or stated in the first sentences (e.g. the report is about treating a known condition, a procedure, or a complication of a known disease).
+"last_sentence": the number of the last sentence that may be shown to a clinician who must make the diagnosis. Sentences 1..last_sentence must NOT name the final diagnosis or a synonym, and must NOT contain a test result, procedure, pathology finding or treatment that by itself reveals it. Within that limit, keep as much of the history, examination and initial investigations as possible. Use 0 if no usable vignette exists.
+"reason": one short sentence explaining the cut.

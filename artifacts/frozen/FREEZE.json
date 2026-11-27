@@ -1,10 +1,10 @@
 {
-  "created_at": "2026-11-26T17:41:28-05:00",
-  "git_commit": "c2adb36768736d398d103b2c0cc2e69d073c2d0a",
+  "created_at": "2026-11-27T00:17:17-05:00",
+  "git_commit": "81b655b1957da89d6fc81f9e7771f893bfc9c362",
   "dry_run": false,
   "files": {
     "config/cues.yaml": "7f61d815b2ede741a3257dd78fda9fedc61ff6b82428bf9aa2b6abfa03efeb63",
-    "config/jobs.yaml": "fa7eef39f716a3d406fe28dcdb0db73cc40ae003525b650b742d9504ac83b3fe",
+    "config/jobs.yaml": "855044bb970c5dad13bbbd8f438bbda4f709bdc1e70ae44a8368d22763b42f03",
     "config/models.lock.yaml": "9352df66f7c0bade042cbf09bd429ab398d4c172fc0d9506c98fea0b8820a0f3",
     "config/models.yaml": "220dba02ace4d22748b834b2548869c36730a6ed23ce713ad82ca390aa849fd6",
     "config/prompts/contam_completion_system.txt": "3a4403b8d403bcf9c9947156a08b3e1c20d4ca9b3bb841fed964c9456dd3faa3",
@@ -14,6 +14,8 @@
     "config/prompts/contam_noid_user.txt": "30e5785c03d542d44eebef81107782975de4c30016313a148f50ae6541fd9f46",
     "config/prompts/posterior_system_case.txt": "86ad3e27eacfc8c221352b59f5c98732d948c94b1648ad488627207c78644371",
     "config/prompts/posterior_system_fixed.txt": "9e2233b8053efb3f9cbbd0a7844e5c8155ea5879d0817ca4c6c26bb06c83ed1f",
+    "config/prompts/prep_fresh_cut_system.txt": "525e6c9f0b0c92f21404e16b4e22a13d5c9f1e9bfc4f2a0539e68cf099221e7c",
+    "config/prompts/prep_fresh_cut_user.txt": "40b29399b464005f6ad0f445dc477b39638330c5445da562cefc34d87071c321",
     "config/prompts/prep_mcr_extract_system.txt": "5f2ab0595abb87743632258d6aaa51b4e468831096d52959f05ff021468ec888",
     "config/prompts/prep_mcr_extract_user.txt": "abe8628d6280a9665df3c4aaf839208d01fd90c525819eb1dc7b5d7342aa33e5",
     "config/prompts/prep_mcr_verify_system.txt": "ca959a8a91a7618b093d4db8c2f8b35930cfa83419ef39729567bc8efcb5b435",
@@ -44,8 +46,8 @@
     "frozen/medcase/prepared.jsonl": "11bcbeca3aa9d2625833041db2a9323bef84e92fb10b2d9363fb2ba9ad2fe7eb"
   },
   "previous": {
-    "created_at": "2026-11-23T17:47:22-05:00",
-    "sha256": "ea6f2a247fb903cebdf9034553cf4aa14dde1011c336be2ef16954d62dc39200",
-    "file": "freeze_history/FREEZE-20261123T174722.json"
+    "created_at": "2026-11-26T17:41:28-05:00",
+    "sha256": "0327bd84632b9f04a50cc8eecd5fcd85ec00e0725cc5e69550e87e4b19770b80",
+    "file": "freeze_history/FREEZE-20261126T174128.json"
   }
 }

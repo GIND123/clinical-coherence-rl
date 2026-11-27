@@ -15,7 +15,8 @@ pip install -U pip wheel
 # vLLM 0.11.0 is built for torch 2.8 + CUDA 12.8, which the Lambda driver (570, CUDA 12.8) supports.
 # Unpinned, pip takes the newest vLLM, built for CUDA 13, and the engine fails with "driver too old".
 pip install "vllm==0.11.0"                         # pulls the matching torch build
-pip install -r requirements/train.txt pytest
+# vLLM 0.11 needs transformers < 5; transformers 4.57 needs huggingface-hub < 1, hence datasets < 4
+pip install -r requirements/train.txt pytest "transformers>=4.56,<5" "datasets>=3,<4"
 pip install -e . --no-deps
 mkdir -p runs/env
 pip freeze > "runs/env/pip-freeze-$(date +%Y%m%d-%H%M%S).txt"

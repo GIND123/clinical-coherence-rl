@@ -128,3 +128,19 @@ jobs:
     efforts: [default]
     temperature: 0.0
     requires_completed: [panel_ext]
+
+  # ------------------------------------------------------------------------
+  # Amendment 3 (2026-11-27; docs/amendment_3.md): real case reports published
+  # 7-27 Nov 2026, after every panel model was frozen (contamination-free by
+  # construction). Items are built by `ccrl fresh run` (cut -> screen -> extract
+  # -> verify -> finalize -> build) and recorded in artifacts/frozen/fresh/
+  # FREEZE_fresh.json before this job sends anything.
+  # ------------------------------------------------------------------------
+  fresh_panel:
+    priority: B
+    description: up to 150 post-freeze real case reports x 10 calls x 6 panel models
+    item_set: fresh
+    transform_set: all10
+    models: panel
+    efforts: [default]
+    requires_completed: [panel_main]

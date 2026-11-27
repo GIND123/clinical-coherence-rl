@@ -37,6 +37,9 @@ def cmd_data(a) -> int:
     elif a.action == "select-medcase":
         from ccrl.data import medcase
         medcase.select()
+    elif a.action == "select-fresh":
+        from ccrl.data import fresh
+        print(json.dumps(fresh.select(), indent=1))
     return 0
 
 
@@ -194,6 +197,16 @@ def cmd_billing(a) -> int:
     return billing.reconcile(get_ws(a.dry_run), a.start, a.end, a.profile)
 
 
+def cmd_fresh(a) -> int:
+    from ccrl.prep import fresh as F
+    ws = get_ws(a.dry_run)
+    if a.action == "plan":
+        F.plan(ws, a.limit_cases)
+    else:
+        print(json.dumps(F.run(ws, a.profile, a.max_spend, a.limit_cases), default=str))
+    return 0
+
+
 def cmd_contamination(a) -> int:
     from ccrl.panel import contamination as C
     ws = get_ws(a.dry_run)
@@ -220,7 +233,7 @@ def cmd_rehearse(a) -> int:
     from ccrl.archive import export
     from ccrl.bedrock import models as M
     from ccrl.panel import contamination, freeze, items, jobs, qa
-    from ccrl.prep import medcase, phrasebank
+    from ccrl.prep import fresh, medcase, phrasebank
 
     def _assert_noop(summary):
         if summary.get("ran"):
@@ -264,6 +277,8 @@ def cmd_rehearse(a) -> int:
     step("run temp0_ext (limited)", lambda: jobs.run_job("temp0_ext", ws, limit_cases=max(2, n // 4),
                                                         force_order=True))
     step("contamination probe (limited)", lambda: contamination.run(ws, limit_cases=max(2, n // 4)))
+    step("fresh real cases (limited)", lambda: fresh.run(ws, limit=6))
+    step("fresh rerun (must be a no-op)", lambda: _assert_noop(fresh.run(ws, limit=6)))
     step("contamination rerun (must be a no-op)",
          lambda: _assert_noop(contamination.run(ws, limit_cases=max(2, n // 4))))
     step("queue rerun (must be a no-op)", lambda: cmd_queue(argparse.Namespace(
@@ -290,7 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_doctor)
 
     s = sub.add_parser("data", help="raw corpora (not needed to run the panel)")
-    s.add_argument("action", choices=["download", "build-ddxplus", "fit-reference", "select-medcase"])
+    s.add_argument("action", choices=["download", "build-ddxplus", "fit-reference", "select-medcase", "select-fresh"])
     s.add_argument("dataset", nargs="?", choices=["ddxplus", "medcase"], default="ddxplus")
     s.set_defaults(fn=cmd_data)
 
@@ -358,6 +373,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--aws-total", type=float, default=None,
                    help="confirm-flex without Cost Explorer: Billing -> Credits 'Total estimated amount used' in USD")
     s.set_defaults(fn=cmd_billing)
+
+    s = sub.add_parser("fresh", help="Amendment 3: real case reports published after the models were frozen")
+    s.add_argument("action", choices=["plan", "run"])
+    s.add_argument("--limit-cases", type=int, default=None, help="only the first N selected reports (testing)")
+    s.add_argument("--max-spend", type=float, default=None, help="extra USD cap per stage")
+    s.set_defaults(fn=cmd_fresh)
 
     s = sub.add_parser("contamination", help="Amendment 2: memorisation probe for the real case reports")
     s.add_argument("action", choices=["plan", "run", "analyze"])

@@ -45,3 +45,13 @@ parties, including through APIs. `.gitignore` blocks such paths.
 `artifacts/frozen/items/*`, `artifacts/frozen/FREEZE.json`,
 `config/models.lock.yaml`. All are deterministic functions of the committed
 inputs and the archived preprocessing responses.
+
+## Post-freeze case reports (Amendment 3)
+* Source: PubMed Central, publication type *Case Reports*, open access under CC BY, electronic
+  publication 7–27 Nov 2026 (after every panel model was frozen on Bedrock, 6 Nov 2026).
+  Selected by `ccrl data select-fresh` on 27 Nov 2026 (`artifacts/frozen/fresh/selection_report.json`).
+* What is stored: the case-presentation section only (verbatim, figure/table captions and citation
+  marks removed), with title, journal, date, licence URL and article link per report
+  (`artifacts/frozen/fresh/cases_selected.jsonl`). CC BY permits redistribution with attribution;
+  the link and licence of every report are kept with its text.
+* Published, de-identified case reports; no patient-level data beyond what the authors published.

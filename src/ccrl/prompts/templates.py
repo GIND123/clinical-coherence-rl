@@ -19,7 +19,7 @@ from ccrl.util import sha256_bytes
 
 PLACEHOLDER_KEYS = ("candidate_block", "candidates_section", "vignette", "authority_section",
                     "case_prompt", "final_diagnosis", "final_diagnosis_raw", "extraction_json", "items_json",
-                    "pmcid", "journal", "year", "n_words", "first_part")
+                    "pmcid", "journal", "year", "n_words", "first_part", "numbered_sentences")
 
 
 @lru_cache(maxsize=None)
