@@ -13,7 +13,9 @@ lora: {r: 32, alpha: 64, dropout: 0.0, target_modules: all-linear}
 # gradient checkpointing off. SFT configs turn checkpointing back on.
 gradient_checkpointing: false
 shared_prompt: true
-shared_micro_batch_tokens: 8192
+# 4096: on the H100 (no checkpointing, vLLM holding 30%) 8192 ran out of memory (27 Nov); the GPU
+# check (ccrl.train.check_shared) confirms the largest size that fits before any training run
+shared_micro_batch_tokens: 4096
 chat_template_kwargs: {enable_thinking: false}
 dataset: ddxplus
 label_free: false

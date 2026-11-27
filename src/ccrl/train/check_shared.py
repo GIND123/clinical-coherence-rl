@@ -33,7 +33,10 @@ def main(argv=None) -> int:
     ap.add_argument("--config", default="config/train/ccr_acc_fid.yaml")
     ap.add_argument("--out", default="runs/env/shared_check.json")
     ap.add_argument("--completion-len", type=int, default=340)
+    ap.add_argument("--mem-fraction", type=float, default=0.62,
+                    help="cap on this process's GPU memory: leaves vLLM's 30%% share and a margin, as in training")
     a = ap.parse_args(argv)
+    torch.cuda.set_per_process_memory_fraction(a.mem_fraction)
     cfg = load_config(a.config)
     cfg["gradient_checkpointing"] = False
     model, tok = load_model_and_tokenizer(cfg, trainable=True)
@@ -56,14 +59,14 @@ def main(argv=None) -> int:
     n_tok = sum(len(s.completion_ids) for s in samples)
     model.train()
 
-    def step(shared: bool):
+    def step(shared: bool, tokens: int = 4096):
         model.zero_grad(set_to_none=True)
         torch.cuda.synchronize()
         torch.cuda.reset_peak_memory_stats()
         t0 = time.time()
         lps = {}
-        mbs = shared_prompt_batches(samples, int(cfg.get("shared_micro_batch_tokens", 8192))) if shared else \
-            token_budget_batches(samples, 8192, 4)      # checkpointing is off here: smaller unshared batches
+        mbs = shared_prompt_batches(samples, tokens) if shared else \
+            token_budget_batches(samples, 4096, 2)      # checkpointing is off here: small unshared batches
         for mb in mbs:
             fn = shared_prompt_logprobs if shared else completion_logprobs_lowmem
             out, _ = fn(model, mb, tok.pad_token_id or tok.eos_token_id, int(cfg.get("logprob_chunk", 2048)))
@@ -77,7 +80,20 @@ def main(argv=None) -> int:
         return sec, torch.cuda.max_memory_allocated() / 2**30, g, lps
 
     s_un, m_un, g_un, lp_un = step(False)
-    s_sh, m_sh, g_sh, lp_sh = step(True)
+    tokens = None
+    for tk in (int(cfg.get("shared_micro_batch_tokens", 4096)), 3072, 2048, 1536):
+        try:
+            s_sh, m_sh, g_sh, lp_sh = step(True, tk)
+            tokens = tk
+            break
+        except torch.OutOfMemoryError:
+            model.zero_grad(set_to_none=True)
+            torch.cuda.empty_cache()
+            print(f"shared pass: {tk} tokens per micro-batch ran out of memory; trying smaller", flush=True)
+    if tokens is None:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.out).write_text(json.dumps({"pass": False, "reason": "out of memory at 1536 tokens"}), encoding="utf-8")
+        return 4
     d = torch.cat([(lp_un[k] - lp_sh[k]).abs() for k in lp_un])
     cos = float(torch.nn.functional.cosine_similarity(g_un, g_sh, dim=0))
     rel = float((g_un - g_sh).norm() / g_un.norm())
@@ -85,7 +101,8 @@ def main(argv=None) -> int:
            "completion_tokens": n_tok, "prompt_tokens_mean": sum(len(s.prompt_ids) for s in samples) / len(samples),
            "sec_unshared": s_un, "sec_shared": s_sh, "speedup": s_un / s_sh, "mem_gb_unshared": m_un,
            "mem_gb_shared": m_sh, "logprob_absdiff_max": float(d.max()), "logprob_absdiff_mean": float(d.mean()),
-           "grad_cosine": cos, "grad_rel_diff": rel, "pass": bool(cos >= 0.999 and rel <= 0.01)}
+           "grad_cosine": cos, "grad_rel_diff": rel, "shared_micro_batch_tokens": tokens,
+           "mem_fraction": a.mem_fraction, "pass": bool(cos >= 0.999 and rel <= 0.01)}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=1), encoding="utf-8")
     print(json.dumps(res, indent=1))

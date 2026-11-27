@@ -31,7 +31,7 @@ pull_full() { ssh_ "cd ~/clinical-coherence-rl && tar czf - --exclude='*.pt' \
                     --exclude='runs/train/*/rollout_adapter' runs" | tar xzf - -C "$dest" || true; }
 env_vars="PRICE_H=$price BUDGET_USD=$budget"
 [ "$machine" = a100 ] && env_vars="$env_vars GPU_MEM=0.45 VLLM_SLEEP=1 NO_SHARED=1"
-ssh_ "cd ~/clinical-coherence-rl && mkdir -p runs/env && (pgrep -f '[l]ambda_stage_a.sh' >/dev/null || \
+ssh_ "cd ~/clinical-coherence-rl && mkdir -p runs/env && (pgrep -f '^bash scripts/[l]ambda_stage_a' >/dev/null || \
       (nohup env $env_vars bash scripts/lambda_stage_a.sh $machine > runs/env/queue_$machine.log 2>&1 < /dev/null &))"
 t0=$(date +%s)
 echo "queue started on $machine ($ip); copying to $dest"
@@ -41,7 +41,7 @@ while :; do
   hours=$("$PY" -c "import time; print((time.time()-$t0)/3600)")
   cost=$("$PY" -c "print(round($hours*$price, 2))")
   state=$(ssh_ "cd ~/clinical-coherence-rl/runs/env && ls DONE STOPPED_* 2>/dev/null | head -1; \
-                pgrep -f '[l]ambda_stage_a.sh' >/dev/null && echo RUNNING || echo DEAD" | tr '\n' ' ' || echo "UNREACHABLE")
+                pgrep -f '^bash scripts/[l]ambda_stage_a' >/dev/null && echo RUNNING || echo DEAD" | tr '\n' ' ' || echo "UNREACHABLE")
   echo "$(date -Is) ~\$$cost  $state  $(tail -1 "$dest/runs/env/queue_$machine.log" 2>/dev/null | cut -c1-120)"
   if [[ "$state" == *DONE* || "$state" == *STOPPED* || "$state" == *DEAD* ]] || \
      "$PY" -c "import sys; sys.exit(0 if $cost >= $budget + 1 else 1)"; then

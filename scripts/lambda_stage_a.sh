@@ -27,9 +27,11 @@ BUDGET_USD=${BUDGET_USD:-1000}
 mem_args=()
 [ -n "${GPU_MEM:-}" ] && mem_args+=(--gpu-mem "$GPU_MEM")
 [ -n "${VLLM_SLEEP:-}" ] && mem_args+=(--vllm-sleep)
-shared_args=()
-[ -f runs/env/NO_SHARED ] && shared_args+=(--no-shared)
-[ -n "${NO_SHARED:-}" ] && shared_args+=(--no-shared)     # A100 40 GB: unshared pass with checkpointing
+shared_opts() {  # decided when each training run starts (the check may have run earlier in this queue)
+  if [ -f runs/env/NO_SHARED ] || [ -n "${NO_SHARED:-}" ]; then echo "--no-shared"; return; fi   # A100: unshared
+  [ -f runs/env/shared_check.json ] && python -c "import json; t=json.load(open('runs/env/shared_check.json')).get('shared_micro_batch_tokens'); print(f'--shared-tokens {t}' if t else '')"
+  return 0
+}
 
 spent() { python -c "import time; print(round((time.time()-$(cat $START))/3600*$PRICE_H, 2))"; }
 guard() {  # $1 = estimated $ of the next phase
@@ -80,7 +82,7 @@ train() {  # cfg seed [steps]
   if finished "$cfg" "$seed" "$steps"; then echo "already finished: ${cfg}_s${seed} ${steps}"; return 0; fi
   echo "$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)" > "runs/env/hardware_${cfg}_s${seed}.txt"
   ccrl train run --config "config/train/${cfg}.yaml" --seed "$seed" --backend vllm ${steps:+--steps "$steps"} \
-      "${mem_args[@]}" "${shared_args[@]}"
+      "${mem_args[@]}" $(shared_opts)
 }
 
 gonogo() {  # cfg seed

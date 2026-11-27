@@ -21,6 +21,8 @@ def add_parser(sub) -> None:
     s.add_argument("--tau-i", type=float, default=None, help="reward tau_I measured by `ccrl train tau-i`")
     s.add_argument("--gpu-mem", type=float, default=None, help="vLLM share of GPU memory (A100-40GB: 0.45)")
     s.add_argument("--vllm-sleep", action="store_true", help="free vLLM memory during the backward pass")
+    s.add_argument("--shared-tokens", type=int, default=None,
+                   help="micro-batch size of the shared-prompt pass (from runs/env/shared_check.json)")
     s.add_argument("--no-shared", action="store_true",
                    help="unshared training pass with gradient checkpointing (fallback if check_shared fails)")
     s = t.add_parser("eval", help="evaluate a local model on the frozen panel items")
@@ -83,6 +85,8 @@ def run(a: argparse.Namespace) -> int:
             over["generation"] = gen_over
         if a.tau_i is not None:
             over["reward"] = {"tau_I": float(a.tau_i)}
+        if a.shared_tokens:
+            over["shared_micro_batch_tokens"] = int(a.shared_tokens)
         if a.no_shared:
             over.update(shared_prompt=False, gradient_checkpointing=True)
         cfg = load_config(a.config, over)
