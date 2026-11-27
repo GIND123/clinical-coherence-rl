@@ -7,6 +7,10 @@
 set -euo pipefail
 cd ~/clinical-coherence-rl && source .venv/bin/activate
 export HF_HUB_ENABLE_HF_TRANSFER=1
+mkdir -p runs/env
+mem_args=()                                   # on a 40 GB A100:  GPU_MEM=0.45 VLLM_SLEEP=1 bash scripts/lambda_smoke.sh
+[ -n "${GPU_MEM:-}" ] && mem_args+=(--gpu-mem "$GPU_MEM")
+[ -n "${VLLM_SLEEP:-}" ] && mem_args+=(--vllm-sleep)
 
 echo "== 1. vLLM evaluation, base Qwen3-4B, 10 pilot cases"
 ccrl train eval --model Qwen/Qwen3-4B --name smoke_eval_vllm --set pilot --limit-cases 10 --backend vllm
@@ -18,7 +22,7 @@ assert d.parse_ok.mean() > 0.8, "parse rate too low: check the chat template / t
 PY
 
 echo "== 2. GRPO, 4 steps, vLLM rollouts (ccr_acc_fid, 4B)"
-ccrl train run --config config/train/ccr_acc_fid.yaml --seed 99 --steps 4 --backend vllm
+ccrl train run --config config/train/ccr_acc_fid.yaml --seed 99 --steps 4 --backend vllm "${mem_args[@]}"
 echo "== 3. GRPO, 2 steps, transformers rollouts (timing reference)"
 ccrl train run --config config/train/rlvr.yaml --seed 99 --steps 2 --backend hf
 python - <<'PY'

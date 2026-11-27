@@ -19,6 +19,8 @@ def add_parser(sub) -> None:
     s.add_argument("--model", default=None)
     s.add_argument("--backend", choices=["hf", "vllm"], default=None, help="rollout engine (default: config)")
     s.add_argument("--tau-i", type=float, default=None, help="reward tau_I measured by `ccrl train tau-i`")
+    s.add_argument("--gpu-mem", type=float, default=None, help="vLLM share of GPU memory (A100-40GB: 0.45)")
+    s.add_argument("--vllm-sleep", action="store_true", help="free vLLM memory during the backward pass")
     s = t.add_parser("eval", help="evaluate a local model on the frozen panel items")
     s.add_argument("--model", required=True)
     s.add_argument("--adapter", default=None)
@@ -54,8 +56,15 @@ def run(a: argparse.Namespace) -> int:
             over["steps"] = a.steps
         if a.model:
             over["model"] = a.model
+        gen_over = {}
         if a.backend:
-            over["generation"] = {"backend": a.backend}
+            gen_over["backend"] = a.backend
+        if a.gpu_mem is not None:
+            gen_over["gpu_memory_utilization"] = float(a.gpu_mem)
+        if a.vllm_sleep:
+            gen_over["sleep"] = True
+        if gen_over:
+            over["generation"] = gen_over
         if a.tau_i is not None:
             over["reward"] = {"tau_I": float(a.tau_i)}
         cfg = load_config(a.config, over)

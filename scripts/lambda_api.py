@@ -6,8 +6,9 @@ lists, launches or terminates instances named NAME, and only adds the SSH key NA
     python scripts/lambda_api.py types                     # GPU types with capacity now, $/h
     python scripts/lambda_api.py list                      # our instances only
     python scripts/lambda_api.py add-key ~/.ssh/govind_llm.pub
-    python scripts/lambda_api.py launch gpu_1x_h100_pcie us-west-3
-    python scripts/lambda_api.py terminate --yes           # terminates OUR instances only
+    python scripts/lambda_api.py launch gpu_1x_h100_pcie us-west-3 [--allow-existing]
+    python scripts/lambda_api.py terminate --yes           # terminates ALL of OUR instances
+    python scripts/lambda_api.py terminate <id> --yes      # one of ours, by id
 """
 from __future__ import annotations
 
@@ -55,7 +56,7 @@ def main(argv: list[str]) -> int:
             print(f"${price:6.2f}/h  {k:28s} {gpu:30s} {', '.join(regions)}")
     elif cmd == "list":
         for i in ours():
-            print(json.dumps({k: i.get(k) for k in ("id", "name", "status", "ip")}
+            print(json.dumps({k: i.get(k) for k in ("id", "name", "status", "ip", "jupyter_url")}
                              | {"type": i["instance_type"]["name"], "region": i["region"]["name"]}))
         if not ours():
             print(f"no instances named {NAME}")
@@ -69,13 +70,18 @@ def main(argv: list[str]) -> int:
             print(f"added ssh key {NAME}")
     elif cmd == "launch":
         itype, region = argv[1], argv[2]
-        if ours():
-            raise SystemExit(f"an instance named {NAME} already exists; terminate it first or reuse it")
+        if ours() and "--allow-existing" not in argv:
+            raise SystemExit(f"an instance named {NAME} already exists; reuse it, or add --allow-existing")
         r = call("POST", "/instance-operations/launch", {"region_name": region, "instance_type_name": itype,
                                                           "ssh_key_names": [NAME], "quantity": 1, "name": NAME})
         print(json.dumps(r))
     elif cmd == "terminate":
-        ids = [i["id"] for i in ours()]
+        mine = [i["id"] for i in ours()]
+        wanted = [a for a in argv[1:] if not a.startswith("--")]
+        foreign = [a for a in wanted if a not in mine]
+        if foreign:
+            raise SystemExit(f"refusing: {foreign} are not instances named {NAME}")
+        ids = wanted or mine
         if not ids:
             print(f"no instances named {NAME}")
             return 0
