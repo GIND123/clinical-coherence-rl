@@ -74,3 +74,37 @@ These were all made before any further training run:
 - The registered tests H2–H7 are implemented in `ccrl train hypotheses`.
 - Every trained model is also evaluated at temperature 0, and on the post-freeze real case
   reports once they exist.
+
+## Rerun after the audit (27 Nov 2026)
+
+| run | GPU | steps | outcome |
+|---|---|---|---|
+| `ccr_acc_fid_s0` (attempt 2) | H100 | 21 / 300 | stopped by the collapse safeguard: 20-step mean M 0.266 against a 10-step baseline of 0.418 |
+| `rlvr_s0` (attempt 2) | A100 | 36 / 300 | stopped by the collapse safeguard: 20-step mean M 0.315 against 0.452 (−30.4%) |
+
+**This time the decline is real, not noise.** M by 5-step block was 0.45 → 0.39 → 0.18 → 0.14 →
+0.12 (CCR) and 0.44 → … → 0.31 (RLVR).
+
+Evaluation of the stopped adapters (DDXPlus, temperature 0.7):
+
+| | top-1 | mean top probability | posterior entropy (nats; uniform = 3.89) | distinct top-1 answers | JS order |
+|---|---|---|---|---|---|
+| untrained | 0.330 | 0.666 | 1.55 | 39 | 0.314 |
+| RLVR, 36 steps | 0.350 | 0.423 | 2.62 | 39 | 0.187 |
+| CCR+acc+fid, 21 steps | 0.330 | 0.235 | 3.37 | 37 | 0.065 |
+
+**Diagnosis.** The coherence reward reduced incoherence mainly by **hedging**: it flattened every
+posterior towards uniform.
+
+- **Accuracy and the argmax** did not change. The cross-patient information M fell to 0.12,
+  i.e. the answers stopped being patient-specific.
+- **Why the gate failed.** The M and sensitivity gates are batch-level multipliers. Under
+  group-relative advantages they give no individual rollout a reason to avoid flatness.
+- **What rewarded flatness.** The invariance term (flatter answers diverge less) and the Brier
+  accuracy term (an overconfident model gains by hedging) both do.
+- **The counterweight was too weak.** Fidelity fell from 0.28 to 0.02, but at γ = 0.5 it was
+  outweighed.
+
+Proposition 4 (gates exclude collapse) holds for the optimum of the expected reward. It does not
+constrain the per-rollout gradient that GRPO follows. RLVR also drifted towards flatter
+posteriors, but much less.
