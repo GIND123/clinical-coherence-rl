@@ -6,7 +6,6 @@
 # prints seconds per step for both backends, which sets the GPU-hour plan.
 set -euo pipefail
 cd ~/clinical-coherence-rl && source .venv/bin/activate
-export HF_HUB_ENABLE_HF_TRANSFER=1
 mkdir -p runs/env
 mem_args=()                                   # on a 40 GB A100:  GPU_MEM=0.45 VLLM_SLEEP=1 bash scripts/lambda_smoke.sh
 [ -n "${GPU_MEM:-}" ] && mem_args+=(--gpu-mem "$GPU_MEM")

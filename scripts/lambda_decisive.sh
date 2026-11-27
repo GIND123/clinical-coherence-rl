@@ -12,7 +12,6 @@
 # Re-running skips finished pieces; training resumes from its newest checkpoint (every 25 steps).
 set -euo pipefail
 cd ~/clinical-coherence-rl && source .venv/bin/activate
-export HF_HUB_ENABLE_HF_TRANSFER=1
 M=Qwen/Qwen3-4B
 mkdir -p runs/env
 ev() { [ -f "runs/local_eval/$2.parquet" ] || ccrl train eval --backend vllm --model "$M" --name "$2" "${@:3}" ${1:+--adapter "$1"}; }

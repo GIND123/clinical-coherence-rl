@@ -13,16 +13,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip wheel
 pip install vllm                                   # pulls the torch build vLLM is compiled against
-pip install -r requirements/train.txt hf_transfer
+pip install -r requirements/train.txt
 pip install -e . --no-deps
 mkdir -p runs/env
 pip freeze > "runs/env/pip-freeze-$(date +%Y%m%d-%H%M%S).txt"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv > runs/env/gpu.txt
 python -c "import torch, vllm, transformers, peft; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), '| vllm', vllm.__version__, '| transformers', transformers.__version__, '| peft', peft.__version__)"
 
-export HF_HUB_ENABLE_HF_TRANSFER=1
-huggingface-cli download Qwen/Qwen3-4B >/dev/null
-huggingface-cli download Qwen/Qwen3-8B >/dev/null
+python -c "from huggingface_hub import snapshot_download as d; [d(m) for m in ('Qwen/Qwen3-4B', 'Qwen/Qwen3-8B')]"
 
 ccrl data download ddxplus                         # ~180 MB, md5-checked
 ccrl train build-pool                              # 60k training patients, held-out pathologies excluded
