@@ -26,6 +26,8 @@ prep() {
   # untrained baselines on the confirmatory items: registered decoding, and temperature 0
   ev "" base4b
   ev "" base4b_t0 --temperature 0
+  # post-freeze real case reports (Amendment 3), once the PI has pushed them
+  if [ -f artifacts/frozen/fresh/items/sets.json ]; then ev "" base4b_fresh --set fresh; fi
 }
 
 train() {
@@ -37,10 +39,15 @@ train() {
   [ -d "runs/train/${cfg}_s0/final" ] || ccrl train run --config "config/train/${cfg}.yaml" --seed 0 --backend vllm \
       --tau-i "$tau" "${mem_args[@]}"
   ev "runs/train/${cfg}_s0/final" "${cfg}_s0"
+  # secondary: temperature 0 (like-for-like with the panel's temp0 arms, H6 confound) and real cases
+  ev "runs/train/${cfg}_s0/final" "${cfg}_s0_t0" --temperature 0
+  if [ -f artifacts/frozen/fresh/items/sets.json ]; then ev "runs/train/${cfg}_s0/final" "${cfg}_s0_fresh" --set fresh; fi
 }
 
 compare() {
+  ccrl train hypotheses --dir runs/local_eval
   ccrl train compare --ref runs/local_eval/rlvr_s0.parquet   --new runs/local_eval/ccr_acc_fid_s0.parquet
+  ccrl train compare --ref runs/local_eval/rlvr_s0_t0.parquet --new runs/local_eval/ccr_acc_fid_s0_t0.parquet
   ccrl train compare --ref runs/local_eval/base4b.parquet    --new runs/local_eval/ccr_acc_fid_s0.parquet
   ccrl train compare --ref runs/local_eval/base4b_t0.parquet --new runs/local_eval/ccr_acc_fid_s0.parquet
 }

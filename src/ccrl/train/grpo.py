@@ -225,14 +225,17 @@ def train(cfg: dict[str, Any]) -> Path:
         for gi, gp in enumerate(groups):
             K_of = len(gp.codes)
             pgs.append(PatientGroup(parsed.get((gi, "x"), []), parsed.get((gi, "xp"), []), parsed.get((gi, "xm"), []),
-                                    gold=gp.gold, added_loglik=gp.added_loglik))
+                                    gold=gp.gold, added_loglik=gp.added_loglik, K=len(gp.codes)))
         res, M = batch_rewards(pgs, rcfg, K_of)
         samples: list[Sample] = []
         kept = skipped = 0
         k = 0
         for gi, gr in enumerate(res):
             n = len(gr.total)
-            adv = advantages(gr.total, bool(cfg.get("normalize_std", True)), float(cfg.get("min_group_std", 1e-4)))
+            gp = groups[gi]
+            rendering = cfg.get("advantage_baseline", "rendering") == "rendering"
+            sizes = (len(gp.x), len(gp.xp), len(gp.xm)) if rendering else None
+            adv = advantages(gr.total, bool(cfg.get("normalize_std", True)), float(cfg.get("min_group_std", 1e-4)), sizes)
             rows = list(range(k, k + n))
             k += n
             if adv is None:

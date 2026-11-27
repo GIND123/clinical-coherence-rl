@@ -23,6 +23,9 @@ warmup_steps: 10
 lr_schedule: constant
 kl_coef: 0.01
 normalize_std: true
+# advantage baseline: "rendering" centres x, x' and x- rollouts on their own means (per-prompt
+# baseline) with one pooled SD; "group" = the original whole-group centring (audit 27 Nov 2026)
+advantage_baseline: rendering
 min_group_std: 1.0e-4
 max_grad_norm: 1.0
 micro_batch_tokens: 16384
@@ -40,6 +43,8 @@ collapse_stop: true
 collapse_baseline_steps: 10
 collapse_window: 20
 collapse_drop: 0.30
-reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.10, delta_S: 0.234, m0: 0.459, c_fid: 3.0,
+# tau_I = 0.788: measured 27 Nov 2026 as registered (95th pct of the untrained Qwen3-4B pilot retest JS,
+# `ccrl train tau-i`). Qwen3-8B runs use their own measurement (docs/training_runs.md).
+reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.788, delta_S: 0.234, m0: 0.459, c_fid: 3.0,
          sensitivity: batch, acc_mode: brier}
 output_dir: runs/train/{name}_s{seed}

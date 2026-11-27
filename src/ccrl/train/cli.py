@@ -31,6 +31,9 @@ def add_parser(sub) -> None:
     s.add_argument("--temperature", type=float, default=0.7, help="0.7 = registered decoding; 0 = baseline")
     s = t.add_parser("tau-i", help="reward constant tau_I from the base model's pilot evaluation")
     s.add_argument("--eval", required=True, help="runs/local_eval/<name>.parquet of the untrained model, --set pilot")
+    s = t.add_parser("hypotheses", help="the registered confirmatory tests H2-H7 over all evaluated arms")
+    s.add_argument("--dir", default="runs/local_eval")
+    s.add_argument("--panel", default=None, help="panel export posteriors.parquet (for H6)")
     s = t.add_parser("compare", help="paired comparison of two evaluated models")
     s.add_argument("--ref", required=True)
     s.add_argument("--new", required=True)
@@ -101,6 +104,13 @@ def run(a: argparse.Namespace) -> int:
 
         from ccrl.train.evaluate import tau_i_from_eval
         print(_json.dumps(tau_i_from_eval(a.eval)))
+        return 0
+    if a.taction == "hypotheses":
+        from ccrl.train.hypotheses import run as run_h
+        df = run_h(a.dir, a.panel)
+        print(df.to_string(index=False) if len(df) else "no evaluated arms found")
+        if len(df):
+            df.to_csv(Path(a.dir) / "hypotheses.csv", index=False)
         return 0
     if a.taction == "compare":
         from ccrl.train.evaluate import compare

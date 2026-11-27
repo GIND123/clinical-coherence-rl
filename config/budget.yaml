@@ -44,7 +44,7 @@ job_caps_usd:
   prep_fresh_cut: 40.00          # ~238 Kimi K3 calls, expected ~$12
   prep_fresh_extract: 40.00      # <= 238 Kimi K3 calls, expected ~$12
   prep_fresh_verify: 5.00        # GLM-5
-  fresh_panel: 130.00            # 150 cases x 10 calls x 6 models, expected ~$60
+  fresh_panel: 130.00            # every passing case (<= 238) x 10 calls x 6 models, ~$0.40/case
 
 # Disk: a paid job refuses to start with less free space than this on the
 # disk holding runs/, and only the newest `keep_backups` ledger backups are

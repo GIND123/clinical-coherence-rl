@@ -2,4 +2,4 @@
 base: base.yaml
 dataset: medcase
 label_free: true
-reward: {alpha: 0.0, beta: 1.0, gamma: 0.0, tau_I: 0.10, delta_S: 0.234, m0: 0.459, sensitivity: batch}
+reward: {alpha: 0.0, beta: 1.0, gamma: 0.0, delta_S: 0.234, m0: 0.459, sensitivity: batch}

@@ -60,3 +60,17 @@ after 13 steps.
   (tests in `tests/test_vllm_backend.py`).
 - **The M history is read back from the run log on resume,** so the baseline survives a restart.
 - **Both arms of the decisive pair are rerun from scratch** under the new rule.
+
+## Other changes before the rerun (27 Nov 2026; [audit_2026-11-27.md](audit_2026-11-27.md))
+
+These were all made before any further training run:
+
+- Each patient group uses its own candidate count. 29 real training cases have 9 candidates, so
+  without this the label-free arm crashes.
+- The x- invariance term uses a leave-one-out mean.
+- Advantages use a per-rendering baseline (`advantage_baseline: rendering`).
+- `tau_I = 0.788` is set in the base config for every arm. Qwen3-8B runs measure their own
+  value from the untrained 8B's pilot evaluation, by the same rule.
+- The registered tests H2–H7 are implemented in `ccrl train hypotheses`.
+- Every trained model is also evaluated at temperature 0, and on the post-freeze real case
+  reports once they exist.

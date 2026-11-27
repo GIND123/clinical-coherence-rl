@@ -63,14 +63,16 @@ involved):
    panel.
 4. **Finalise,** with the **same deterministic rules** as the panel (`finalize_case`, 10
    candidates).
-5. **Sample size.** The first **150** passing cases in the frozen order are used, and later
-   ones are reserve. If fewer than 60 pass, the run stops before the panel.
+5. **Sample size.** **Every** passing case is used, up to the 238 selected. (The first draft of
+   this amendment, 27 Nov 2026, capped this at 150; it was raised the same day, before any call,
+   so that the replication rests on as many real cases as exist.) If fewer than 60 pass, the run
+   stops before the panel.
 6. **Build** items with the panel's renderer (the same 10 calls per case). Their SHA-256s are
    written to `artifacts/frozen/fresh/FREEZE_fresh.json` **before** the first panel call.
 
 ## 3. Panel arm
 
-**`fresh_panel`:** up to 150 cases × 10 calls × all 6 panel models, at provider-default
+**`fresh_panel`:** every passing case (at most 238) × 10 calls × all 6 panel models, at provider-default
 decoding, as in the main panel.
 
 ## 4. Pre-specified analyses
@@ -105,7 +107,7 @@ These are the same estimands as the main panel, per model (`ccrl analyze`; job
 |---|---|
 | Cut, 238 Kimi K3 calls | ~$3–13 |
 | Extraction and verification | ~$12 |
-| Panel, 150 cases × 10 calls × 6 models | ~$60, of which Kimi K3 is ~95% |
-| **Total** | **~$76–90** |
+| Panel, ~170 cases (if ~70% pass) × 10 calls × 6 models | ~$68, of which Kimi K3 is ~95% |
+| **Total** | **~$90**; at most ~$125 if every case passes |
 
 The job caps are $40, $40, $5 and $130. Calls must finish by 18 Dec 2026.

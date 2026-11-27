@@ -82,6 +82,7 @@ class PatientGroup:
     q_xm: list
     gold: int | None = None                  # label index (only used by R_acc)
     added_loglik: np.ndarray | None = None   # tau * sum_{t in E \ E_r} log P(t | d) (DDXPlus), else None
+    K: int | None = None                     # this patient's number of candidates (real cases vary: 9 or 10)
 
 
 @dataclass
@@ -154,7 +155,9 @@ def group_rewards(g: PatientGroup, M: float, cfg: RewardConfig, K: int, gate_S: 
             excess.append(np.zeros(0))
             return np.zeros(0), np.zeros(0)
         floor = js_rows(Q, own_loo) if cfg.noise_floor_correction else np.zeros(n)
-        inv = js_rows(Q, np.repeat(partner_mean[None], n, 0))
+        # partner: one mean for all rows (x <-> x'), or one row per rollout (leave-one-out, x-)
+        partner = partner_mean if partner_mean.ndim == 2 else np.repeat(partner_mean[None], n, 0)
+        inv = js_rows(Q, partner)
         I = 1.0 - np.minimum(1.0, inv / cfg.tau_I)
         d = js_rows(Q, np.repeat(contrast_mean[None], n, 0)) - floor
         excess.append(np.where(valid, np.maximum(0.0, d), 0.0))
@@ -164,8 +167,10 @@ def group_rewards(g: PatientGroup, M: float, cfg: RewardConfig, K: int, gate_S: 
     loo_x, loo_p, loo_m = _loo_means(Qx, vx), _loo_means(Qp, vp), _loo_means(Qm, vm)
     Ix, Sx = part(Qx, vx, mean_p, mean_m, loo_x)
     Ip, Sp = part(Qp, vp, mean_x, mean_m, loo_p)
-    # ablated rollouts: no meaning-preserving partner exists; invariance is to their own rendering
-    Im, Sm = part(Qm, vm, mean_m, 0.5 * (mean_x + mean_p), loo_m)
+    # ablated rollouts: no meaning-preserving partner exists; invariance is to their own rendering,
+    # measured against the LEAVE-ONE-OUT mean (a mean that includes the rollout itself would shrink
+    # its divergence by ~1/H and inflate the reward; audit 27 Nov 2026)
+    Im, Sm = part(Qm, vm, loo_m, 0.5 * (mean_x + mean_p), loo_m)
     I = np.concatenate([Ix, Ip, Im])
     S = np.concatenate([Sx, Sp, Sm])
     valid = np.concatenate([vx, vp, vm])
@@ -221,23 +226,50 @@ def group_rewards(g: PatientGroup, M: float, cfg: RewardConfig, K: int, gate_S: 
 
 
 def batch_rewards(groups: list[PatientGroup], cfg: RewardConfig, K: int) -> tuple[list[GroupRewards], float]:
-    """Two passes: per-group terms, then the batch-level sensitivity gate."""
-    M = cross_patient_information([patient_mean(g, K) for g in groups])
-    first = [group_rewards(g, M, cfg, K, gate_S=1.0) for g in groups]
+    """Two passes: per-group terms, then the batch-level sensitivity gate. Each group uses its own
+    candidate count (g.K, else K); for M the patient means are zero-padded to the largest count,
+    which leaves every entropy unchanged (audit 27 Nov 2026: 29 of the 2,000 real training cases
+    have 9 candidates, and a single shared K crashed or mis-scored those batches)."""
+    Ks = [int(g.K or K) for g in groups]
+    means = [patient_mean(g, k) for g, k in zip(groups, Ks)]
+    kmax = max(Ks) if Ks else K
+    M = cross_patient_information([np.pad(m, (0, kmax - len(m))) for m in means])
+    first = [group_rewards(g, M, cfg, k, gate_S=1.0) for g, k in zip(groups, Ks)]
     if cfg.sensitivity != "batch":
         return first, M
     # mean floor-corrected movement of full-evidence rollouts away from the contrast
     exc = np.concatenate([gr.terms["excess_full"] for gr in first]) if first else np.zeros(0)
     raw = float(np.mean(exc)) / cfg.delta_S if len(exc) and cfg.delta_S > 0 else 0.0
     gate_S = float(np.sqrt(min(1.0, raw))) if cfg.sqrt_S else min(1.0, raw)
-    return [group_rewards(g, M, cfg, K, gate_S=gate_S) for g in groups], M
+    return [group_rewards(g, M, cfg, k, gate_S=gate_S) for g, k in zip(groups, Ks)], M
 
 
-def advantages(total: np.ndarray, normalize_std: bool = True, min_std: float = 1e-6) -> np.ndarray | None:
-    """Standardise within the whole paired group (plan §3.3). Returns None when the
-    group carries no signal (DAPO-style dynamic sampling: skip it)."""
-    sd = float(total.std())
+def advantages(total: np.ndarray, normalize_std: bool = True, min_std: float = 1e-6,
+               sizes: tuple[int, ...] | None = None) -> np.ndarray | None:
+    """Group-relative advantages for one paired group. Returns None when the group carries no
+    signal (DAPO-style dynamic sampling: skip it).
+
+    `sizes` = (G, G, H), the rollouts on x, x' and x- in order: each rendering is centred on ITS
+    OWN mean (a per-prompt baseline, as in GRPO), and all are scaled by one pooled within-rendering
+    SD. Centring on the whole group's mean (sizes=None, the original form) gives the reduced-
+    evidence x- rollouts a systematically negative advantage (they are less accurate by
+    construction): unbiased in expectation but high-variance, and with H = 2 it pushes the policy
+    away from whatever it answers on reduced evidence (audit 27 Nov 2026)."""
+    total = np.asarray(total, dtype=float)
+    if sizes is None:
+        sd = float(total.std())
+        if sd < min_std:
+            return None
+        a = total - total.mean()
+        return a / sd if normalize_std else a
+    assert sum(sizes) == len(total), (sizes, len(total))
+    a = np.empty_like(total)
+    k = 0
+    for n in sizes:
+        seg = total[k:k + n]
+        a[k:k + n] = seg - seg.mean() if n else seg
+        k += n
+    sd = float(np.sqrt(np.mean(a ** 2)))
     if sd < min_std:
         return None
-    a = total - total.mean()
     return a / sd if normalize_std else a

@@ -32,7 +32,7 @@ from ccrl.util import now_iso, read_jsonl, sha256_file, write_json, write_jsonl
 from ccrl.workspace import Workspace
 
 JOB_CUT, JOB_EXTRACT, JOB_VERIFY, PANEL_JOB = "prep_fresh_cut", "prep_fresh_extract", "prep_fresh_verify", "fresh_panel"
-N_USE = 150
+N_USE = None                  # all passing cases (up to the 238 selected); was 150 (changed 27 Nov 2026, before any call)
 MIN_USE = 60                  # fewer usable cases than this: stop before the panel (not worth the cost)
 MIN_SENTENCES, MIN_CHARS = 4, 400
 
@@ -170,7 +170,7 @@ def finalize(ws: Workspace) -> dict:
         rec.update({k: r[k] for k in ("title", "journal", "publication_date", "license", "article_link")})
         if rec["status"] == "ok":
             n_ok += 1
-            if n_ok > N_USE:
+            if N_USE is not None and n_ok > N_USE:
                 rec["status"] = "reserve"
         out.append(rec)
     write_jsonl(out_dir(ws) / "prepared_fresh.jsonl", out)
@@ -245,8 +245,10 @@ def plan(ws: Workspace, limit: int | None = None) -> None:
     print(f"[fresh] {n} selected case reports (published 7-27 Nov 2026)")
     print(f"  1. cut (Kimi K3): {n} calls, expected ${fc['expected']:.2f} (high ${fc['high']:.2f})")
     print("  3-4. extraction (Kimi K3) + verification (GLM-5): ~$0.07 per usable case")
-    print(f"  7. panel: up to {N_USE} cases x 10 calls x 6 models; ~$0.40 per case (Kimi K3 ~95%)")
-    print(f"  expected total about ${fc['expected'] + 0.07 * N_USE * 1.2 + 0.40 * N_USE:.0f}")
+    n_use = n if N_USE is None else N_USE
+    print(f"  7. panel: every passing case (at most {n_use}) x 10 calls x 6 models; ~$0.40 per case (Kimi K3 ~95%)")
+    print(f"  expected total about ${fc['expected'] + 0.07 * n * 0.9 + 0.40 * n_use * 0.7:.0f} "
+          f"(if ~70% pass; at most ${fc['high'] + 0.07 * n + 0.40 * n_use:.0f})")
 
 
 def run(ws: Workspace, profile: str | None = None, max_spend: float | None = None, limit: int | None = None) -> dict:
