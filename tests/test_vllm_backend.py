@@ -133,3 +133,20 @@ def test_tau_i_from_pilot_eval(tmp_path):
     pd.DataFrame(rows).to_parquet(f)
     r = tau_i_from_eval(str(f))
     assert r["n_cases"] == 20 and 0 < r["median_js"] < r["tau_I"] < 1
+
+
+def test_collapse_check_ignores_batch_noise_but_catches_collapse():
+    import numpy as np
+
+    from ccrl.train.grpo import collapse_check
+    # the two real decisive runs (27 Nov 2026) that the single-step rule stopped at steps 10 and 13
+    ccr = [0.574, 0.374, 0.515, 0.393, 0.312, 0.556, 0.352, 0.324, 0.316, 0.289]
+    rlvr = [0.525, 0.426, 0.509, 0.445, 0.356, 0.589, 0.419, 0.465, 0.458, 0.45, 0.374, 0.441, 0.316]
+    for m in (ccr, rlvr):
+        assert all(collapse_check(m[:k]) is None for k in range(1, len(m) + 1))
+    rng = np.random.default_rng(0)
+    noisy = list(0.45 * (1 + 0.25 * rng.standard_normal(300)))           # stationary, CV 0.25
+    assert all(collapse_check(noisy[:k]) is None for k in range(1, 301))
+    collapsing = noisy[:40] + [0.05] * 40                                  # M -> ~0
+    hits = [k for k in range(1, 81) if collapse_check(collapsing[:k])]
+    assert hits and hits[0] <= 40 + 20

@@ -199,7 +199,8 @@ def train(cfg: dict[str, Any]) -> Path:
         start = int(state["step"]) + 1
         sampler.r.seed(seed * 100003 + start)
         print(f"[grpo] resumed from {d} at step {start}", flush=True)
-    m_hist: list[float] = []
+    # M history survives a resume (read back from the log), so the collapse baseline is stable
+    m_hist: list[float] = [float(r["M"]) for r in _log_rows(out_dir) if "sec" in r and r.get("step", 0) < start]
     K_of = None
     for step in range(start, steps + 1):
         t0 = time.time()
@@ -273,15 +274,46 @@ def train(cfg: dict[str, Any]) -> Path:
                "tis_w": stats["tis_w_sum"] / stats["tis_n"] if stats["tis_n"] else None}
         log.log(row)
         m_hist.append(float(M))
-        if len(m_hist) > 5:
-            base_m = float(np.mean(m_hist[:5]))
-            if base_m > 0 and M < 0.7 * base_m and cfg.get("collapse_stop", True):
-                log.log({"step": step, "event": "early_stop_M_collapse", "M": float(M), "baseline_M": base_m})
-                _save(model, tok, opt, sched, out_dir, step, final=True)
-                return out_dir / "final"
+        hit = collapse_check(m_hist, int(cfg.get("collapse_baseline_steps", 10)), int(cfg.get("collapse_window", 20)),
+                             float(cfg.get("collapse_drop", 0.30)))
+        if hit and cfg.get("collapse_stop", True):
+            log.log({"step": step, "event": "early_stop_M_collapse", **hit})
+            _save(model, tok, opt, sched, out_dir, step, final=True)
+            return out_dir / "final"
         if cfg.get("save_every") and step % int(cfg["save_every"]) == 0:
             _save(model, tok, opt, sched, out_dir, step)
     return _save(model, tok, opt, sched, out_dir, steps, final=True)
+
+
+def collapse_check(m_hist: list[float], baseline_steps: int = 10, window: int = 20,
+                   drop: float = 0.30) -> dict | None:
+    """Collapse safeguard (OSF update of 27 Nov 2026). Stop when the mean cross-patient information
+    M over the last `window` steps falls more than `drop` below its mean over the first
+    `baseline_steps` steps. Per-step M is a 16-patient batch statistic with a step-to-step CV of
+    0.16-0.26 (first decisive runs), so the registered single-step comparison against a 5-step mean
+    fired on noise within 10-13 steps; averaging keeps the false-alarm rate negligible while a real
+    collapse (M -> 0) is still caught within about `window` steps."""
+    if len(m_hist) < max(baseline_steps, window) + 1:
+        return None
+    base = float(np.mean(m_hist[:baseline_steps]))
+    cur = float(np.mean(m_hist[-window:]))
+    if base > 0 and cur < (1.0 - drop) * base:
+        return {"M_window_mean": cur, "baseline_M": base, "window": window, "baseline_steps": baseline_steps}
+    return None
+
+
+def _log_rows(out_dir: Path) -> list[dict]:
+    import json
+    p = out_dir / "train_log.jsonl"
+    if not p.exists():
+        return []
+    rows = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        try:
+            rows.append(json.loads(line))
+        except ValueError:
+            pass
+    return rows
 
 
 def _save(model, tok, opt, sched, out_dir: Path, step: int, final: bool = False) -> Path:

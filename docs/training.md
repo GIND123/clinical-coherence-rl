@@ -110,6 +110,8 @@ python scripts/lambda_api.py terminate --yes            # billing stops only whe
 the pilot items (`ccrl train tau-i`). It is passed to every run with `--tau-i` and recorded in
 the run's `config.yaml`.
 
+**Run log, safeguard change and untrained baselines:** [training_runs.md](training_runs.md).
+
 ## Order of runs (decisive comparison first)
 
 1. `ccrl train reward-suite`: 10 PASS (CPU, seconds).

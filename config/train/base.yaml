@@ -35,6 +35,11 @@ generation: {backend: hf, max_new_tokens: 512, temperature: 1.0, top_p: 1.0, bat
              gpu_memory_utilization: 0.3, max_model_len: 4096, sleep: false}
 save_every: 25
 collapse_stop: true
+# collapse safeguard (OSF update 27 Nov 2026): mean M over the last 20 steps < 70% of the mean of
+# the first 10 steps. Per-step M is too noisy (CV 0.16-0.26) for a single-step test.
+collapse_baseline_steps: 10
+collapse_window: 20
+collapse_drop: 0.30
 reward: {alpha: 1.0, beta: 1.0, gamma: 0.5, tau_I: 0.10, delta_S: 0.234, m0: 0.459, c_fid: 3.0,
          sensitivity: batch, acc_mode: brier}
 output_dir: runs/train/{name}_s{seed}
