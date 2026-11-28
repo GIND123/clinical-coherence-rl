@@ -49,7 +49,9 @@ fresh() { [ -f artifacts/frozen/fresh/items/sets.json ] && ev "$1" "$2_fresh" --
 
 check() {
   [ -f runs/env/shared_check.json ] && return 0
-  if ! python -m ccrl.train.check_shared --config config/train/ccr_acc_fid.yaml --out runs/env/shared_check.json; then
+  # CHECK_MEM: share of GPU memory training can use (default 0.62 with vLLM awake; ~0.8 with VLLM_SLEEP=1)
+  if ! python -m ccrl.train.check_shared --config config/train/ccr_acc_fid.yaml --out runs/env/shared_check.json \
+       ${CHECK_MEM:+--mem-fraction "$CHECK_MEM"}; then
     echo "shared-prompt check FAILED: training falls back to the unshared pass" | tee runs/env/NO_SHARED
   fi
 }
