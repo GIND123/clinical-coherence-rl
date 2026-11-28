@@ -131,3 +131,36 @@ Reading the stopped adapters' raw answers changed the picture
 
 Changes before the next run: strict readout for the reward, team credit, and the safeguard on the
 registered readout's M (Amendment 4).
+
+## Stage A (started 27 Nov 2026, 23:00 UTC; [plan_final.md](plan_final.md), [amendment_5.md](amendment_5.md))
+
+**Hardware.** No H100 PCIe was available, so stage A started on one H100 SXM5 ($4.89/h) and one
+A100 40 GB ($1.99/h).
+
+**The H100 was lost before any result.**
+
+- **What it did.** It finished the untrained-model evaluations: confirmatory items at
+  temperature 0.7 and 0, pilot, and MMLU-Pro/GSM8K. These were copied back and reused.
+- **What failed.** Its first coherence run ran out of memory at step 3: the shared-prompt pass at
+  4,096 tokens, with vLLM holding 26 GB.
+- **How it was lost.** Minutes later the instance became unreachable, and Lambda then reported it
+  as terminated. Our scripts did not terminate it: the orchestrator log has no terminate call. The
+  cause is unknown.
+- **What it showed.** Before failing, the shared pass ran at about 22 s per step, against 78 s
+  before.
+
+**Replacement.** No single H100 was available afterwards, so the coherence queue moved to a second
+A100 40 GB.
+
+- **The shared pass does not fit a 40 GB card** without checkpointing: its smallest unit is one
+  prompt with its four rollouts. The GPU check found no size that fits.
+- **Both A100s therefore train with the unshared pass and gradient checkpointing,** which is the
+  pass every earlier run used. The two passes are the same computation: equal in fp32
+  (`tests/test_shared_prompt.py`), and on the H100 within bf16 noise.
+- **Result:** no stage A run uses the shared pass.
+
+**Orchestration fixes made during the launch,** before any training result:
+
+- the process check matched its own SSH command line;
+- the GPU check retried inside its exception handler, so the failed pass was never freed;
+- a machine unreachable for 30 minutes is now terminated, so it stops billing.
