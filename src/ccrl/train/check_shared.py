@@ -92,26 +92,29 @@ def main(argv=None) -> int:
     # checkpointing). Noise floor: the same pass grouped two sequences per micro-batch (bf16 sums
     # depend on batch shapes), or, if that does not fit, accumulated in the reverse order
     s_un, m_un, g_un, lp_un = step(False)
+    print(f"reference pass: {s_un:.1f} s, peak {m_un:.1f} GB", flush=True)
+    floor_kind = "grouping 2 vs 1"
     try:
         _s1, _m1, g_un1, lp_un1 = step(False, per_batch=2)
-        floor_kind = "grouping 2 vs 1"
     except torch.OutOfMemoryError:
+        floor_kind = "reverse order"
+    if floor_kind == "reverse order":        # retried outside the handler, so the failed pass is freed
         model.zero_grad(set_to_none=True)
         torch.cuda.empty_cache()
         _s1, _m1, g_un1, lp_un1 = step(False, reverse=True)
-        floor_kind = "reverse order"
     floor_rel = float((g_un - g_un1).norm() / g_un.norm())
     floor_cos = float(torch.nn.functional.cosine_similarity(g_un, g_un1, dim=0))
     floor_lp = float(torch.cat([(lp_un[k] - lp_un1[k]).abs() for k in lp_un]).mean())
     tokens = None
+    print(f"noise floor ({floor_kind}): rel {floor_rel:.4f}, cos {floor_cos:.5f}", flush=True)
     for tk in (int(cfg.get("shared_micro_batch_tokens", 4096)), 3072, 2048, 1536):
+        model.zero_grad(set_to_none=True)
+        torch.cuda.empty_cache()                 # outside any handler: a failed attempt is freed by now
         try:
             s_sh, m_sh, g_sh, lp_sh = step(True, tk)
             tokens = tk
             break
         except torch.OutOfMemoryError:
-            model.zero_grad(set_to_none=True)
-            torch.cuda.empty_cache()
             print(f"shared pass: {tk} tokens per micro-batch ran out of memory; trying smaller", flush=True)
     if tokens is None:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
