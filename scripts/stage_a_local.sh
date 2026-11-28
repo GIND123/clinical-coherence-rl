@@ -31,9 +31,11 @@ pull_full() { ssh_ "cd ~/clinical-coherence-rl && tar czf - --exclude='*.pt' \
                     --exclude='runs/train/*/rollout_adapter' runs" | tar xzf - -C "$dest" || true; }
 env_vars="PRICE_H=$price BUDGET_USD=$budget"
 [ "$machine" = a100 ] && env_vars="$env_vars GPU_MEM=0.45 VLLM_SLEEP=1 NO_SHARED=1"
+env_vars="$env_vars ${EXTRA_ENV:-}"       # e.g. EXTRA_ENV="GPU_MEM=0.45 VLLM_SLEEP=1 CHECK_MEM=0.8" on a 40 GB card
 ssh_ "cd ~/clinical-coherence-rl && mkdir -p runs/env && (pgrep -f '^bash scripts/[l]ambda_stage_a' >/dev/null || \
       (nohup env $env_vars bash scripts/lambda_stage_a.sh $machine > runs/env/queue_$machine.log 2>&1 < /dev/null &))"
 t0=$(date +%s)
+unreachable=0
 echo "queue started on $machine ($ip); copying to $dest"
 while :; do
   sleep 600
@@ -43,7 +45,9 @@ while :; do
   state=$(ssh_ "cd ~/clinical-coherence-rl/runs/env && ls DONE STOPPED_* 2>/dev/null | head -1; \
                 pgrep -f '^bash scripts/[l]ambda_stage_a' >/dev/null && echo RUNNING || echo DEAD" | tr '\n' ' ' || echo "UNREACHABLE")
   echo "$(date -Is) ~\$$cost  $state  $(tail -1 "$dest/runs/env/queue_$machine.log" 2>/dev/null | cut -c1-120)"
-  if [[ "$state" == *DONE* || "$state" == *STOPPED* || "$state" == *DEAD* ]] || \
+  if [[ "$state" == *UNREACHABLE* ]]; then unreachable=$((unreachable + 1)); else unreachable=0; fi
+  # three unreachable checks in a row (30 min): stop paying for a machine we cannot reach
+  if [[ "$state" == *DONE* || "$state" == *STOPPED* || "$state" == *DEAD* ]] || [ "$unreachable" -ge 3 ] || \
      "$PY" -c "import sys; sys.exit(0 if $cost >= $budget + 1 else 1)"; then
     pull_full
     echo "terminating $machine ($id): $state  ~\$$cost"
